@@ -4,13 +4,11 @@ import (
 	"context"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/Abhinav-DROID-NG/quizarena/database"
 	"github.com/Abhinav-DROID-NG/quizarena/middleware"
 	"github.com/Abhinav-DROID-NG/quizarena/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/redis/go-redis/v9"
 	"google.golang.org/api/idtoken"
 )
 
@@ -32,7 +30,6 @@ type tokenManager interface {
 type AuthHandler struct {
 	DB             *database.Client
 	TokenManager   tokenManager
-	Redis          *redis.Client
 	GoogleClientID string
 	Verifier       GoogleVerifier
 }
@@ -41,8 +38,8 @@ type GoogleAuthRequest struct {
 	IDToken string `json:"id_token" binding:"required"`
 }
 
-func NewAuthHandler(db *database.Client, tm tokenManager, redisClient *redis.Client, clientID string) *AuthHandler {
-	return &AuthHandler{DB: db, TokenManager: tm, Redis: redisClient, GoogleClientID: clientID, Verifier: googleVerifier{}}
+func NewAuthHandler(db *database.Client, tm tokenManager, clientID string) *AuthHandler {
+	return &AuthHandler{DB: db, TokenManager: tm, GoogleClientID: clientID, Verifier: googleVerifier{}}
 }
 
 func (h *AuthHandler) GoogleAuth(c *gin.Context) {
@@ -79,10 +76,6 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 	if auth == "" || !strings.HasPrefix(auth, "Bearer ") {
 		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "missing bearer token")
 		return
-	}
-	token := strings.TrimPrefix(auth, "Bearer ")
-	if h.Redis != nil {
-		_ = h.Redis.Set(c.Request.Context(), "blacklist:"+token, "1", 24*time.Hour).Err()
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "logged out"})
 }

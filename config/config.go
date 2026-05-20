@@ -16,9 +16,6 @@ type Config struct {
 	GoogleClientID     string
 	DatabaseURL        string
 	DBMaxConns         int32
-	RedisAddr          string
-	RedisPassword      string
-	RedisDB            int
 	ShutdownTimeoutSec int
 }
 
@@ -31,9 +28,6 @@ func Load() Config {
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/quizarena?sslmode=disable"),
 		DBMaxConns:         getEnvAsInt32("DB_MAX_CONNS", 30),
-		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
-		RedisPassword:      getEnv("REDIS_PASSWORD", ""),
-		RedisDB:            getEnvAsInt("REDIS_DB", 0),
 		ShutdownTimeoutSec: getEnvAsInt("SHUTDOWN_TIMEOUT_SEC", 10),
 	}
 }
