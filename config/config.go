@@ -1,6 +1,7 @@
 package config
 
 import (
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -29,7 +30,7 @@ func Load() Config {
 		JWTExpiration:      time.Duration(getEnvAsInt("JWT_EXP_HOURS", 24)) * time.Hour,
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/quizarena?sslmode=disable"),
-		DBMaxConns:         int32(getEnvAsInt("DB_MAX_CONNS", 30)),
+		DBMaxConns:         getEnvAsInt32("DB_MAX_CONNS", 30),
 		RedisAddr:          getEnv("REDIS_ADDR", "localhost:6379"),
 		RedisPassword:      getEnv("REDIS_PASSWORD", ""),
 		RedisDB:            getEnvAsInt("REDIS_DB", 0),
@@ -69,4 +70,19 @@ func getEnvAsInt(name string, defaultVal int) int {
 		return defaultVal
 	}
 	return value
+}
+
+func getEnvAsInt32(name string, defaultVal int32) int32 {
+	valueStr := getEnv(name, "")
+	if valueStr == "" {
+		return defaultVal
+	}
+	value64, err := strconv.ParseInt(valueStr, 10, 32)
+	if err != nil {
+		return defaultVal
+	}
+	if value64 < 0 || value64 > math.MaxInt32 {
+		return defaultVal
+	}
+	return int32(value64)
 }
