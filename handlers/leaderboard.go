@@ -1,24 +1,20 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
-	"github.com/Abhinav-DROID-NG/quizarena/cache"
 	"github.com/Abhinav-DROID-NG/quizarena/database"
 	"github.com/Abhinav-DROID-NG/quizarena/utils"
 	"github.com/gin-gonic/gin"
 )
 
 type LeaderboardHandler struct {
-	DB    *database.Client
-	Cache *cache.Client
+	DB *database.Client
 }
 
-func NewLeaderboardHandler(db *database.Client, cacheClient *cache.Client) *LeaderboardHandler {
-	return &LeaderboardHandler{DB: db, Cache: cacheClient}
+func NewLeaderboardHandler(db *database.Client) *LeaderboardHandler {
+	return &LeaderboardHandler{DB: db}
 }
 
 func (h *LeaderboardHandler) Global(c *gin.Context) {
@@ -36,21 +32,10 @@ func (h *LeaderboardHandler) respond(c *gin.Context, subject string) {
 			limit = parsed
 		}
 	}
-	cacheKey := fmt.Sprintf("leaderboard:%s:%d", subject, limit)
-	if h.Cache != nil {
-		var cached []any
-		if found, err := h.Cache.GetJSON(c.Request.Context(), cacheKey, &cached); err == nil && found {
-			c.JSON(http.StatusOK, cached)
-			return
-		}
-	}
 	leaders, err := h.DB.ListLeaderboard(c.Request.Context(), subject, limit)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to load leaderboard")
 		return
-	}
-	if h.Cache != nil {
-		_ = h.Cache.SetJSON(c.Request.Context(), cacheKey, leaders, 30*time.Second)
 	}
 	c.JSON(http.StatusOK, leaders)
 }

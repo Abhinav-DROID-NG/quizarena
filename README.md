@@ -1,6 +1,6 @@
 # QuizArena Backend
 
-Production-oriented Go backend for adaptive quiz gameplay with Google OAuth2, JWT auth, PostgreSQL, and Redis caching.
+Production-oriented Go backend for adaptive quiz gameplay with Google OAuth2, JWT auth, and PostgreSQL.
 
 ## Features
 - Google OAuth2 login endpoint + JWT issuance
@@ -13,7 +13,6 @@ Production-oriented Go backend for adaptive quiz gameplay with Google OAuth2, JW
   - Difficulty K-factors (easy=16, medium=24, hard=32)
   - Anti-guessing penalties and confidence score
 - PostgreSQL schema and indexes
-- Redis leaderboard caching with graceful DB fallback
 - Health check endpoint (`GET /health`)
 - Graceful shutdown
 
@@ -26,7 +25,6 @@ Production-oriented Go backend for adaptive quiz gameplay with Google OAuth2, JW
    - `GOOGLE_CLIENT_ID`
    - `JWT_SECRET`
    - `DATABASE_URL`
-   - `REDIS_ADDR`
    - `FRONTEND_ORIGIN`
 3. Run server:
    ```bash
