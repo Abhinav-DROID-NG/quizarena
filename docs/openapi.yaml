@@ -1,0 +1,58 @@
+openapi: 3.0.3
+info:
+  title: QuizArena API
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /health:
+    get:
+      summary: Health check
+  /auth/google:
+    post:
+      summary: Google OAuth callback
+  /auth/logout:
+    post:
+      summary: Logout and invalidate token
+  /auth/me:
+    get:
+      summary: Current user profile
+  /quiz/start:
+    post:
+      summary: Start quiz session
+  /quiz/next-question:
+    get:
+      summary: Get adaptive question
+  /quiz/submit-answer:
+    post:
+      summary: Submit answer and update Elo
+  /quiz/session/{id}:
+    get:
+      summary: Session history
+  /leaderboard:
+    get:
+      summary: Global leaderboard
+  /leaderboard/subject/{subject}:
+    get:
+      summary: Subject leaderboard
+  /leaderboard/user/{id}:
+    get:
+      summary: User rank and stats
+  /user/profile:
+    get:
+      summary: User profile
+    put:
+      summary: Update user profile
+  /user/dashboard:
+    get:
+      summary: Dashboard metrics
+  /admin/questions:
+    post:
+      summary: Add question
+    get:
+      summary: List questions
+  /admin/questions/{id}:
+    put:
+      summary: Edit question
+    delete:
+      summary: Delete question
