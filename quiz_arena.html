@@ -268,10 +268,10 @@
             <button class="btn btn-dark" onclick="goTo('leaderboard')">View Rankings</button>
           </div>
           <div class="stats-grid">
-            <div class="stat-card"><div class="value">4,200+</div><div class="muted">Curated questions</div></div>
-            <div class="stat-card"><div class="value">11</div><div class="muted">GATE CS subjects</div></div>
-            <div class="stat-card"><div class="value">18,500+</div><div class="muted">Active users</div></div>
-            <div class="stat-card"><div class="value">92%</div><div class="muted">Selection rate</div></div>
+            <div class="stat-card"><div class="value" id="landingQuestionCount">--</div><div class="muted">Curated questions</div></div>
+            <div class="stat-card"><div class="value" id="landingSubjectCount">--</div><div class="muted">GATE CS subjects</div></div>
+            <div class="stat-card"><div class="value" id="landingUserCount">--</div><div class="muted">Leaderboard users loaded</div></div>
+            <div class="stat-card"><div class="value" id="landingAccuracy">--</div><div class="muted">Average leaderboard accuracy</div></div>
           </div>
         </div>
         <div class="panel">
@@ -304,23 +304,24 @@
     <section class="page" id="page-login">
       <div class="panel form-wrap">
         <h2>Login / Signup</h2>
-        <p style="margin:0.5rem 0 0.9rem;">Access your dashboard with Google OAuth2 or email credentials.</p>
-        <button class="btn btn-primary" style="width:100%; margin-bottom:0.8rem;" onclick="showToast('Redirecting to Google OAuth2...', 'success')">Continue with Google</button>
-        <div class="field"><label>Email</label><input id="authEmail" type="email" placeholder="you@example.com" /></div>
-        <div class="field"><label>Password</label><input id="authPassword" type="password" placeholder="••••••••" /></div>
+        <p style="margin:0.5rem 0 0.9rem;">Connect this UI to your running backend APIs.</p>
+        <div class="field"><label>Backend API Base URL</label><input id="apiBaseUrl" type="text" placeholder="http://localhost:8080" /></div>
+        <div class="field"><label>Google ID Token (optional)</label><input id="googleIdToken" type="text" placeholder="Paste Google ID token and click Continue with Google" /></div>
+        <button class="btn btn-primary" style="width:100%; margin-bottom:0.8rem;" onclick="handleGoogleAuth()">Continue with Google</button>
+        <div class="field"><label>JWT Access Token</label><input id="authToken" type="text" placeholder="Paste JWT token for protected API calls" /></div>
         <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-top:0.35rem;">
-          <button class="btn btn-primary" onclick="handleAuth('login')">Login</button>
-          <button class="btn btn-dark" onclick="handleAuth('signup')">Create Account</button>
+          <button class="btn btn-primary" onclick="applyToken()">Use Token</button>
+          <button class="btn btn-dark" onclick="logout()">Logout</button>
         </div>
       </div>
     </section>
 
     <section class="page" id="page-dashboard">
       <div class="metrics-grid">
-        <div class="metric-card"><div class="muted">Current ELO</div><div class="value" id="eloValue">1634</div></div>
-        <div class="metric-card"><div class="muted">Accuracy</div><div class="value">84.2%</div></div>
-        <div class="metric-card"><div class="muted">Solved Questions</div><div class="value">1,286</div></div>
-        <div class="metric-card"><div class="muted">Daily Streak</div><div class="value">29 days</div></div>
+        <div class="metric-card"><div class="muted">Current ELO</div><div class="value" id="eloValue">--</div></div>
+        <div class="metric-card"><div class="muted">Peak ELO</div><div class="value" id="peakEloValue">--</div></div>
+        <div class="metric-card"><div class="muted">Accuracy</div><div class="value" id="accuracyValue">--</div></div>
+        <div class="metric-card"><div class="muted">Solved Questions</div><div class="value" id="solvedValue">--</div></div>
       </div>
       <div class="dashboard-grid">
         <div class="panel">
@@ -353,12 +354,12 @@
           <button onclick="showToast('User moderation panel opened', 'success')">User Moderation</button>
         </aside>
         <div>
-          <div class="admin-stats">
-            <div class="admin-card"><div class="muted">Total Questions</div><div class="value">4,238</div></div>
-            <div class="admin-card"><div class="muted">Active Quizzes</div><div class="value">198</div></div>
-            <div class="admin-card"><div class="muted">Daily Attempts</div><div class="value">31,204</div></div>
-            <div class="admin-card"><div class="muted">Reported Items</div><div class="value">17</div></div>
-          </div>
+            <div class="admin-stats">
+              <div class="admin-card"><div class="muted">Total Questions</div><div class="value" id="adminTotalQuestions">--</div></div>
+              <div class="admin-card"><div class="muted">Subjects</div><div class="value" id="adminSubjectCount">--</div></div>
+              <div class="admin-card"><div class="muted">Hard Questions</div><div class="value" id="adminHardQuestions">--</div></div>
+              <div class="admin-card"><div class="muted">Medium Questions</div><div class="value" id="adminMediumQuestions">--</div></div>
+            </div>
           <div class="panel">
             <h3>Question Bank</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:0.6rem; margin:0.8rem 0;">
@@ -430,62 +431,42 @@
       { key: 'leaderboard', label: 'Leaderboard' },
       { key: 'quiz', label: 'Quiz' }
     ];
-    const subjects = [
-      { name: 'DBMS', count: 420, easy: 35, medium: 45, hard: 20, progress: 72 },
-      { name: 'OS', count: 390, easy: 30, medium: 48, hard: 22, progress: 68 },
-      { name: 'CN', count: 360, easy: 34, medium: 44, hard: 22, progress: 66 },
-      { name: 'DSA', count: 510, easy: 28, medium: 47, hard: 25, progress: 74 },
-      { name: 'TOC', count: 355, easy: 32, medium: 46, hard: 22, progress: 61 },
-      { name: 'Compiler Design', count: 295, easy: 26, medium: 49, hard: 25, progress: 54 },
-      { name: 'Digital Logic', count: 365, easy: 33, medium: 44, hard: 23, progress: 64 },
-      { name: 'Computer Architecture', count: 378, easy: 29, medium: 47, hard: 24, progress: 58 },
-      { name: 'Algorithms', count: 412, easy: 25, medium: 48, hard: 27, progress: 63 },
-      { name: 'Discrete Math', count: 402, easy: 31, medium: 45, hard: 24, progress: 69 },
-      { name: 'Aptitude', count: 351, easy: 42, medium: 41, hard: 17, progress: 81 }
-    ];
-    const leaderboard = [
-      { rank: 1, name: 'Aarav Sharma', elo: 2418, solved: 3920, acc: '93.1%' },
-      { rank: 2, name: 'Isha Gupta', elo: 2377, solved: 3742, acc: '92.8%' },
-      { rank: 3, name: 'Rohan Iyer', elo: 2339, solved: 3618, acc: '91.9%' },
-      { rank: 4, name: 'Neha Singh', elo: 2290, solved: 3410, acc: '90.7%' },
-      { rank: 5, name: 'Vikram Nair', elo: 2251, solved: 3324, acc: '90.1%' },
-      { rank: 6, name: 'Kriti Das', elo: 2222, solved: 3217, acc: '89.8%' },
-      { rank: 7, name: 'Manav Rao', elo: 2183, solved: 3085, acc: '88.9%' },
-      { rank: 8, name: 'Sneha Pillai', elo: 2147, solved: 3002, acc: '88.2%' }
-    ];
-    const adminQuestions = [
-      { id: 2011, subject: 'DBMS', difficulty: 'medium', text: 'Which normal form removes transitive dependency?', status: 'Published' },
-      { id: 2012, subject: 'OS', difficulty: 'hard', text: "Banker's algorithm safe sequence check", status: 'Published' },
-      { id: 2013, subject: 'CN', difficulty: 'easy', text: 'OSI model layer handling packet switching', status: 'Review' },
-      { id: 2014, subject: 'Algorithms', difficulty: 'hard', text: 'Amortized complexity of Fibonacci heap decrease-key', status: 'Published' },
-      { id: 2015, subject: 'TOC', difficulty: 'medium', text: 'DFA equivalence minimization theorem', status: 'Draft' }
-    ];
-    const attempts = [
-      { date: '20 May 2026', subject: 'OS', score: '17/20', delta: '+24', status: 'Passed' },
-      { date: '19 May 2026', subject: 'DBMS', score: '19/20', delta: '+31', status: 'Passed' },
-      { date: '19 May 2026', subject: 'CN', score: '14/20', delta: '+8', status: 'Passed' },
-      { date: '18 May 2026', subject: 'Algorithms', score: '11/20', delta: '-5', status: 'Needs Work' }
-    ];
-    const quizQuestions = [
-      { question: 'In DBMS, a transaction that has successfully completed all operations but not yet committed is in which state?', options: ['Active', 'Partially Committed', 'Failed', 'Committed'], answer: 1 },
-      { question: 'Which scheduling algorithm may cause starvation in OS?', options: ['Round Robin', 'FCFS', 'Priority Scheduling', 'SJF with aging'], answer: 2 },
-      { question: 'Which protocol is used for reliable byte-stream transport?', options: ['UDP', 'TCP', 'ICMP', 'ARP'], answer: 1 },
-      { question: 'Time complexity of merge sort in worst case is:', options: ['O(n)', 'O(n log n)', 'O(log n)', 'O(n^2)'], answer: 1 },
-      { question: 'A language accepted by finite automata is:', options: ['Context-free', 'Regular', 'Recursive enumerable', 'Context-sensitive'], answer: 1 }
-    ];
-    const state = { selectedRoute: 'landing', quiz: { index: 0, lives: 3, selected: null, score: 0, timer: 30, interval: null, answered: false } };
-    function renderNav() {
-      const container = document.getElementById('routeLinks');
-      container.innerHTML = routes.map(r => `<button class="nav-btn ${state.selectedRoute === r.key ? 'active' : ''}" onclick="goTo('${r.key}')">${r.label}</button>`).join('');
-    }
-    function goTo(route) {
-      state.selectedRoute = route;
-      window.location.hash = route;
-      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
-      const page = document.getElementById(`page-${route}`) || document.getElementById('page-landing');
-      page.classList.add('active');
-      renderNav();
-      if (route === 'quiz') resetQuiz(false);
+    const defaultApiBase = ['http:', 'https:'].includes(window.location.protocol)
+      ? `${window.location.protocol}//${window.location.host}`
+      : 'http://localhost:8080';
+    const state = {
+      selectedRoute: 'landing',
+      apiBase: localStorage.getItem('quizarena_api_base') || defaultApiBase,
+      token: localStorage.getItem('quizarena_token') || '',
+      user: null,
+      leaderboard: [],
+      questions: [],
+      subjects: [],
+      dashboard: null,
+      quiz: {
+        index: 0,
+        lives: 3,
+        selected: null,
+        score: 0,
+        timer: 0,
+        interval: null,
+        answered: false,
+        sessionID: null,
+        subject: '',
+        currentQuestion: null,
+        wrongInRow: 0,
+        skipsInRow: 0,
+        expectedTimeSeconds: 30
+      }
+    };
+
+    function escapeHTML(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
     }
     function showToast(message, type = '') {
       const toast = document.createElement('div');
@@ -494,84 +475,279 @@
       document.getElementById('toastWrap').appendChild(toast);
       setTimeout(() => toast.remove(), 2600);
     }
-    function initLanding() {
-      document.getElementById('rankPreviewBody').innerHTML = leaderboard.slice(0, 5).map(row => `<tr><td>#${row.rank}</td><td>${row.name}</td><td>${row.elo}</td></tr>`).join('');
-      document.getElementById('landingSubjects').innerHTML = subjects.map(s => `<div class="subject-card"><strong>${s.name}</strong><div class="muted" style="margin-top:0.35rem;">${s.count} questions</div><div class="muted">Easy ${s.easy}% • Medium ${s.medium}% • Hard ${s.hard}%</div></div>`).join('');
-      document.getElementById('subjectGrid').innerHTML = subjects.map(s => `<article class="subject-card"><h4>${s.name}</h4><div class="muted">${s.count} Questions</div><div class="muted">Difficulty: E ${s.easy}% • M ${s.medium}% • H ${s.hard}%</div><div class="progress"><span style="width:${s.progress}%"></span></div><button class="btn btn-dark" style="margin-top:0.55rem; width:100%;" onclick="goTo('quiz');showToast('Starting ${s.name} quiz...','success')">Practice ${s.name}</button></article>`).join('');
+    function formatPct(value) {
+      return Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : '--';
     }
-    function handleAuth(action) {
-      const email = document.getElementById('authEmail').value.trim();
-      const password = document.getElementById('authPassword').value.trim();
-      if (!email || !password) {
-        showToast('Please provide both email and password', 'error');
-        return;
+    async function apiRequest(path, { method = 'GET', body, auth = false } = {}) {
+      const headers = { 'Content-Type': 'application/json' };
+      if (auth) {
+        if (!state.token) throw new Error('Please provide JWT token first');
+        headers.Authorization = `Bearer ${state.token}`;
       }
-      showToast(action === 'login' ? 'Login successful' : 'Account created successfully', 'success');
-      goTo('dashboard');
+      const resp = await fetch(`${state.apiBase}${path}`, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      let payload = null;
+      try {
+        payload = await resp.json();
+      } catch (_) {
+        payload = null;
+      }
+      if (!resp.ok) {
+        const msg = payload?.error?.message || payload?.message || `Request failed (${resp.status})`;
+        throw new Error(msg);
+      }
+      return payload;
     }
-    function renderDashboard() {
-      document.getElementById('dashboardProgress').innerHTML = subjects.slice(0, 6).map(s => `<div style="margin-bottom:0.6rem;"><div style="display:flex; justify-content:space-between; gap:0.4rem;"><span>${s.name}</span><span class="muted">${s.progress}%</span></div><div class="progress"><span style="width:${s.progress}%"></span></div></div>`).join('');
-      document.getElementById('attemptsBody').innerHTML = attempts.map(a => `<tr><td>${a.date}</td><td>${a.subject}</td><td>${a.score}</td><td>${a.delta}</td><td>${a.status}</td></tr>`).join('');
-      const points = [1500, 1522, 1540, 1573, 1602, 1634, 1650, 1628, 1634];
-      const stepX = 500 / (points.length - 1);
-      const min = Math.min(...points) - 20;
-      const max = Math.max(...points) + 20;
-      const plot = points.map((p, i) => `${i * stepX},${210 - ((p - min) / (max - min)) * 180}`).join(' ');
-      document.getElementById('eloChart').innerHTML = `<polyline fill="none" stroke="#c9a84c" stroke-width="3" points="${plot}"></polyline>`;
+
+    function renderNav() {
+      const container = document.getElementById('routeLinks');
+      container.innerHTML = routes
+        .map(r => `<button class="nav-btn ${state.selectedRoute === r.key ? 'active' : ''}" onclick="goTo('${r.key}')">${r.label}</button>`)
+        .join('');
+    }
+    function goTo(route) {
+      state.selectedRoute = route;
+      window.location.hash = route;
+      document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+      const page = document.getElementById(`page-${route}`) || document.getElementById('page-landing');
+      page.classList.add('active');
+      renderNav();
+      if (route === 'quiz' && !state.quiz.currentQuestion) {
+        renderQuizQuestion();
+      }
+    }
+
+    function deriveSubjectsFromQuestions() {
+      const grouped = new Map();
+      state.questions.forEach(q => {
+        const key = q.subject || 'Unknown';
+        if (!grouped.has(key)) grouped.set(key, { name: key, count: 0, easy: 0, medium: 0, hard: 0 });
+        const current = grouped.get(key);
+        current.count += 1;
+        if (q.difficulty === 'easy' || q.difficulty === 'medium' || q.difficulty === 'hard') current[q.difficulty] += 1;
+      });
+      state.subjects = [...grouped.values()].map(s => {
+        const total = s.count || 1;
+        return {
+          ...s,
+          easyPct: Math.round((s.easy / total) * 100),
+          mediumPct: Math.round((s.medium / total) * 100),
+          hardPct: Math.round((s.hard / total) * 100)
+        };
+      }).sort((a, b) => b.count - a.count);
+    }
+    function renderLanding() {
+      const averageAccuracy = state.leaderboard.length
+        ? state.leaderboard.reduce((sum, row) => sum + Number(row.accuracy_percentage || 0), 0) / state.leaderboard.length
+        : NaN;
+      document.getElementById('landingQuestionCount').textContent = state.questions.length ? String(state.questions.length) : '--';
+      document.getElementById('landingSubjectCount').textContent = state.subjects.length ? String(state.subjects.length) : '--';
+      document.getElementById('landingUserCount').textContent = state.leaderboard.length ? String(state.leaderboard.length) : '--';
+      document.getElementById('landingAccuracy').textContent = formatPct(averageAccuracy);
+      document.getElementById('rankPreviewBody').innerHTML = state.leaderboard.slice(0, 5).map((row, idx) =>
+        `<tr><td>#${idx + 1}</td><td>${escapeHTML(row.name || row.email || 'User')}</td><td>${escapeHTML(row.current_elo ?? '--')}</td></tr>`
+      ).join('') || '<tr><td colspan="3">No leaderboard data available</td></tr>';
+      document.getElementById('landingSubjects').innerHTML = state.subjects.map(s =>
+        `<div class="subject-card"><strong>${escapeHTML(s.name)}</strong><div class="muted" style="margin-top:0.35rem;">${escapeHTML(s.count)} questions</div><div class="muted">Easy ${escapeHTML(s.easyPct)}% • Medium ${escapeHTML(s.mediumPct)}% • Hard ${escapeHTML(s.hardPct)}%</div></div>`
+      ).join('') || '<div class="muted">Load admin questions with a valid token to view subject coverage.</div>';
     }
     function renderLeaderboard() {
-      document.getElementById('podium').innerHTML = leaderboard.slice(0, 3).map((p, idx) => `<div class="leader-card podium-${idx + 1}"><div class="muted">#${p.rank}</div><h4>${p.name}</h4><div class="value">${p.elo}</div><div class="muted">Accuracy ${p.acc}</div></div>`).join('');
-      document.getElementById('leaderBody').innerHTML = leaderboard.map(row => `<tr><td>#${row.rank}</td><td>${row.name}</td><td>${row.elo}</td><td>${row.solved}</td><td>${row.acc}</td></tr>`).join('');
+      document.getElementById('podium').innerHTML = state.leaderboard.slice(0, 3).map((p, idx) =>
+        `<div class="leader-card podium-${idx + 1}"><div class="muted">#${idx + 1}</div><h4>${escapeHTML(p.name || p.email || 'User')}</h4><div class="value">${escapeHTML(p.current_elo ?? '--')}</div><div class="muted">Accuracy ${formatPct(p.accuracy_percentage)}</div></div>`
+      ).join('') || '<div class="muted">No leaderboard entries available</div>';
+      document.getElementById('leaderBody').innerHTML = state.leaderboard.map((row, idx) =>
+        `<tr><td>#${idx + 1}</td><td>${escapeHTML(row.name || row.email || 'User')}</td><td>${escapeHTML(row.current_elo ?? '--')}</td><td>${escapeHTML(row.total_questions_solved ?? '--')}</td><td>${formatPct(row.accuracy_percentage)}</td></tr>`
+      ).join('') || '<tr><td colspan="5">No leaderboard data available</td></tr>';
+    }
+    function renderSubjects() {
+      document.getElementById('subjectGrid').innerHTML = state.subjects.map(s =>
+        `<article class="subject-card"><h4>${escapeHTML(s.name)}</h4><div class="muted">${escapeHTML(s.count)} Questions</div><div class="muted">Difficulty: E ${escapeHTML(s.easyPct)}% • M ${escapeHTML(s.mediumPct)}% • H ${escapeHTML(s.hardPct)}%</div><div class="progress"><span style="width:${Math.max(5, s.mediumPct)}%"></span></div><button class="btn btn-dark" style="margin-top:0.55rem; width:100%;" onclick="startQuiz('${escapeHTML(s.name)}')">Practice ${escapeHTML(s.name)}</button></article>`
+      ).join('') || '<div class="muted">Subject data unavailable. Ensure admin questions API is accessible.</div>';
+    }
+    function renderDashboard() {
+      const d = state.dashboard || {};
+      document.getElementById('eloValue').textContent = d.current_elo ?? '--';
+      document.getElementById('peakEloValue').textContent = d.peak_elo ?? '--';
+      document.getElementById('accuracyValue').textContent = formatPct(d.accuracy_percentage);
+      document.getElementById('solvedValue').textContent = d.total_questions_solved ?? '--';
+      document.getElementById('dashboardProgress').innerHTML = state.subjects.slice(0, 6).map(s =>
+        `<div style="margin-bottom:0.6rem;"><div style="display:flex; justify-content:space-between; gap:0.4rem;"><span>${escapeHTML(s.name)}</span><span class="muted">${escapeHTML(s.count)} q</span></div><div class="progress"><span style="width:${Math.max(5, s.mediumPct)}%"></span></div></div>`
+      ).join('') || '<div class="muted">No subject analytics loaded.</div>';
+      document.getElementById('attemptsBody').innerHTML = state.quiz.sessionID
+        ? `<tr><td>Current</td><td>${escapeHTML(state.quiz.subject || '--')}</td><td>${escapeHTML(state.quiz.score)} correct</td><td>--</td><td>In progress</td></tr>`
+        : '<tr><td colspan="5">No session history endpoint for listing attempts. Start a quiz to see live session data.</td></tr>';
+      const points = [Number(d.peak_elo || 0), Number(d.current_elo || 0)].filter(n => Number.isFinite(n) && n > 0);
+      if (points.length < 2) {
+        document.getElementById('eloChart').innerHTML = '';
+        return;
+      }
+      const stepX = 500 / (points.length - 1);
+      const min = Math.min(...points) - 10;
+      const max = Math.max(...points) + 10;
+      const plot = points.map((p, i) => `${i * stepX},${210 - ((p - min) / (max - min || 1)) * 180}`).join(' ');
+      document.getElementById('eloChart').innerHTML = `<polyline fill="none" stroke="#c9a84c" stroke-width="3" points="${plot}"></polyline>`;
     }
     function renderAdmin() {
+      const totalQuestions = state.questions.length;
+      const subjectCount = state.subjects.length;
+      const hard = state.questions.filter(q => q.difficulty === 'hard').length;
+      const medium = state.questions.filter(q => q.difficulty === 'medium').length;
+      document.getElementById('adminTotalQuestions').textContent = totalQuestions || '--';
+      document.getElementById('adminSubjectCount').textContent = subjectCount || '--';
+      document.getElementById('adminHardQuestions').textContent = hard || '--';
+      document.getElementById('adminMediumQuestions').textContent = medium || '--';
+
       const subjectSelect = document.getElementById('adminSubject');
-      subjectSelect.innerHTML = '<option value="">All Subjects</option>' + subjects.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
+      const selectedBefore = subjectSelect.value;
+      subjectSelect.innerHTML = '<option value="">All Subjects</option>' + state.subjects.map(s => `<option value="${escapeHTML(s.name)}">${escapeHTML(s.name)}</option>`).join('');
+      subjectSelect.value = selectedBefore;
+
       const applyFilter = () => {
         const search = document.getElementById('adminSearch').value.toLowerCase();
         const sub = document.getElementById('adminSubject').value;
         const diff = document.getElementById('adminDifficulty').value;
-        const filtered = adminQuestions.filter(q => (!search || q.text.toLowerCase().includes(search) || q.subject.toLowerCase().includes(search)) && (!sub || q.subject === sub) && (!diff || q.difficulty === diff));
-        document.getElementById('adminTableBody').innerHTML = filtered.map(q => `<tr><td>${q.id}</td><td>${q.subject}</td><td>${q.difficulty}</td><td>${q.text}</td><td>${q.status}</td></tr>`).join('') || '<tr><td colspan="5">No matching questions</td></tr>';
+        const filtered = state.questions.filter(q =>
+          (!search || String(q.question_text || '').toLowerCase().includes(search) || String(q.subject || '').toLowerCase().includes(search))
+          && (!sub || q.subject === sub)
+          && (!diff || q.difficulty === diff)
+        );
+        document.getElementById('adminTableBody').innerHTML = filtered.map(q =>
+          `<tr><td>${escapeHTML(q.id)}</td><td>${escapeHTML(q.subject)}</td><td>${escapeHTML(q.difficulty)}</td><td>${escapeHTML(q.question_text)}</td><td>Live</td></tr>`
+        ).join('') || '<tr><td colspan="5">No matching questions</td></tr>';
       };
-      ['adminSearch', 'adminSubject', 'adminDifficulty'].forEach(id => {
-        document.getElementById(id).addEventListener('input', applyFilter);
-        document.getElementById(id).addEventListener('change', applyFilter);
-      });
+      document.getElementById('adminSearch').oninput = applyFilter;
+      document.getElementById('adminSubject').onchange = applyFilter;
+      document.getElementById('adminDifficulty').onchange = applyFilter;
       applyFilter();
     }
-    function resetQuiz(showMessage = false) {
-      clearInterval(state.quiz.interval);
-      state.quiz = { index: 0, lives: 3, selected: null, score: 0, timer: 30, interval: null, answered: false };
-      renderQuizQuestion();
-      if (showMessage) showToast('Quiz restarted', 'success');
+
+    function syncAuthInputs() {
+      document.getElementById('apiBaseUrl').value = state.apiBase;
+      document.getElementById('authToken').value = state.token;
     }
-    function renderQuizQuestion() {
-      const q = quizQuestions[state.quiz.index];
-      if (!q) {
-        showToast(`Quiz complete! Score: ${state.quiz.score}/${quizQuestions.length}`, 'success');
-        document.getElementById('quizQuestion').textContent = 'Quiz completed. Great effort!';
-        document.getElementById('quizOptions').innerHTML = '';
-        document.getElementById('submitAnswerBtn').disabled = true;
-        document.getElementById('nextQuestionBtn').disabled = true;
-        document.getElementById('quizTimer').textContent = '00:00';
+    async function loadLeaderboard() {
+      state.leaderboard = await apiRequest('/leaderboard?limit=100');
+    }
+    async function loadDashboard() {
+      if (!state.token) {
+        state.dashboard = null;
         return;
       }
-      document.getElementById('submitAnswerBtn').disabled = false;
-      document.getElementById('nextQuestionBtn').disabled = true;
-      document.getElementById('quizQuestion').textContent = q.question;
-      document.getElementById('quizProgress').textContent = `${state.quiz.index + 1} / ${quizQuestions.length}`;
-      document.getElementById('quizLives').textContent = state.quiz.lives;
-      document.getElementById('quizProgressBar').style.width = `${((state.quiz.index + 1) / quizQuestions.length) * 100}%`;
-      document.getElementById('quizOptions').innerHTML = q.options.map((opt, idx) => `<div class="quiz-option" onclick="selectOption(${idx})">${opt}</div>`).join('');
-      state.quiz.selected = null;
-      state.quiz.answered = false;
-      state.quiz.timer = 30;
-      startTimer();
+      state.dashboard = await apiRequest('/user/dashboard', { auth: true });
     }
+    async function loadAdminQuestions() {
+      if (!state.token) {
+        state.questions = [];
+        state.subjects = [];
+        return;
+      }
+      state.questions = await apiRequest('/admin/questions', { auth: true });
+      deriveSubjectsFromQuestions();
+    }
+    async function refreshAllData(showErrors = false) {
+      try {
+        await loadLeaderboard();
+      } catch (err) {
+        state.leaderboard = [];
+        if (showErrors) showToast(err.message, 'error');
+      }
+      try {
+        await loadDashboard();
+      } catch (err) {
+        state.dashboard = null;
+        if (showErrors) showToast(err.message, 'error');
+      }
+      try {
+        await loadAdminQuestions();
+      } catch (err) {
+        state.questions = [];
+        state.subjects = [];
+        if (showErrors) showToast(err.message, 'error');
+      }
+      renderLanding();
+      renderLeaderboard();
+      renderSubjects();
+      renderDashboard();
+      renderAdmin();
+    }
+    async function applyToken() {
+      state.apiBase = document.getElementById('apiBaseUrl').value.trim() || defaultApiBase;
+      state.token = document.getElementById('authToken').value.trim();
+      localStorage.setItem('quizarena_api_base', state.apiBase);
+      if (state.token) localStorage.setItem('quizarena_token', state.token);
+      else localStorage.removeItem('quizarena_token');
+      await refreshAllData(true);
+      showToast(state.token ? 'Token applied and data refreshed' : 'Cleared token; loaded public data only', 'success');
+      if (state.token) goTo('dashboard');
+    }
+    async function handleGoogleAuth() {
+      try {
+        state.apiBase = document.getElementById('apiBaseUrl').value.trim() || defaultApiBase;
+        const idToken = document.getElementById('googleIdToken').value.trim();
+        if (!idToken) {
+          showToast('Paste a Google ID token first', 'error');
+          return;
+        }
+        const resp = await apiRequest('/auth/google', { method: 'POST', body: { id_token: idToken } });
+        state.token = resp.token || '';
+        state.user = resp.user || null;
+        localStorage.setItem('quizarena_api_base', state.apiBase);
+        localStorage.setItem('quizarena_token', state.token);
+        syncAuthInputs();
+        await refreshAllData(true);
+        showToast('Google authentication successful', 'success');
+        goTo('dashboard');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+    async function logout() {
+      try {
+        if (state.token) await apiRequest('/auth/logout', { method: 'POST', auth: true });
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+      state.token = '';
+      state.user = null;
+      localStorage.removeItem('quizarena_token');
+      syncAuthInputs();
+      await refreshAllData(false);
+      showToast('Logged out', 'success');
+    }
+
     function selectOption(index) {
       if (state.quiz.answered) return;
       state.quiz.selected = index;
       document.querySelectorAll('.quiz-option').forEach((el, idx) => el.classList.toggle('selected', idx === index));
+    }
+    function renderQuizQuestion() {
+      const q = state.quiz.currentQuestion;
+      if (!q) {
+        document.getElementById('quizQuestion').textContent = 'Start a quiz from Subjects or click Restart Quiz.';
+        document.getElementById('quizOptions').innerHTML = '';
+        document.getElementById('submitAnswerBtn').disabled = true;
+        document.getElementById('nextQuestionBtn').disabled = true;
+        document.getElementById('quizTimer').textContent = '00:00';
+        document.getElementById('quizProgress').textContent = `${state.quiz.index + 1}`;
+        document.getElementById('quizProgressBar').style.width = '10%';
+        document.getElementById('quizLives').textContent = state.quiz.lives;
+        return;
+      }
+      document.getElementById('submitAnswerBtn').disabled = false;
+      document.getElementById('nextQuestionBtn').disabled = true;
+      document.getElementById('quizQuestion').textContent = q.question_text || 'Question unavailable';
+      document.getElementById('quizProgress').textContent = `${state.quiz.index + 1}`;
+      document.getElementById('quizLives').textContent = state.quiz.lives;
+      document.getElementById('quizProgressBar').style.width = `${Math.min(100, ((state.quiz.index % 10) + 1) * 10)}%`;
+      document.getElementById('quizOptions').innerHTML = (q.options || []).map((opt, idx) => `<div class="quiz-option" onclick="selectOption(${idx})">${escapeHTML(opt)}</div>`).join('');
+      state.quiz.selected = null;
+      state.quiz.answered = false;
+      state.quiz.timer = Math.max(10, Math.round(Number(q.expected_time_seconds || 30)));
+      state.quiz.expectedTimeSeconds = state.quiz.timer;
+      startTimer();
     }
     function startTimer() {
       clearInterval(state.quiz.interval);
@@ -584,52 +760,139 @@
         if (state.quiz.timer <= 0) {
           clearInterval(state.quiz.interval);
           if (!state.quiz.answered) {
-            showToast('Time is up! Moving to next question.', 'error');
-            evaluateAnswer(true);
+            state.quiz.answered = true;
+            state.quiz.lives -= 1;
+            state.quiz.skipsInRow += 1;
+            state.quiz.wrongInRow += 1;
+            document.getElementById('quizLives').textContent = state.quiz.lives;
+            document.getElementById('submitAnswerBtn').disabled = true;
+            document.getElementById('nextQuestionBtn').disabled = state.quiz.lives <= 0;
+            showToast('Time is up! Click next for another question.', 'error');
           }
+          return;
         }
         state.quiz.timer -= 1;
       };
       updateTimer();
       state.quiz.interval = setInterval(updateTimer, 1000);
     }
-    function evaluateAnswer(auto = false) {
-      if (state.quiz.answered) return;
-      state.quiz.answered = true;
-      clearInterval(state.quiz.interval);
-      const q = quizQuestions[state.quiz.index];
-      const selected = state.quiz.selected;
-      const options = document.querySelectorAll('.quiz-option');
-      options.forEach((option, idx) => { if (idx === q.answer) option.classList.add('correct'); });
-      if (selected === q.answer) {
-        state.quiz.score += 1;
-        showToast('Correct answer! +1 score', 'success');
-      } else {
-        if (selected !== null && options[selected]) options[selected].classList.add('incorrect');
-        state.quiz.lives -= 1;
-        document.getElementById('quizLives').textContent = state.quiz.lives;
-        showToast(auto ? 'No answer submitted in time' : 'Incorrect answer. Life lost.', 'error');
+    async function fetchNextQuestion() {
+      if (!state.quiz.subject) {
+        showToast('Select a subject first', 'error');
+        return;
       }
-      document.getElementById('submitAnswerBtn').disabled = true;
-      document.getElementById('nextQuestionBtn').disabled = false;
-      if (state.quiz.lives <= 0) {
-        showToast(`Out of lives. Final score ${state.quiz.score}/${quizQuestions.length}`, 'error');
-        document.getElementById('nextQuestionBtn').disabled = true;
+      try {
+        state.quiz.currentQuestion = await apiRequest(`/quiz/next-question?subject=${encodeURIComponent(state.quiz.subject)}`, { auth: true });
+        renderQuizQuestion();
+      } catch (err) {
+        state.quiz.currentQuestion = null;
+        renderQuizQuestion();
+        showToast(err.message, 'error');
       }
     }
-    function nextQuestion() {
-      if (state.quiz.lives <= 0) return;
-      state.quiz.index += 1;
-      renderQuizQuestion();
+    async function startQuiz(subject = '') {
+      if (!state.token) {
+        showToast('Provide JWT token before starting quiz', 'error');
+        goTo('login');
+        return;
+      }
+      state.quiz.subject = subject || state.quiz.subject || state.subjects[0]?.name || '';
+      if (!state.quiz.subject) {
+        showToast('No subject available. Load questions first.', 'error');
+        return;
+      }
+      try {
+        const session = await apiRequest('/quiz/start', { method: 'POST', auth: true, body: { subject: state.quiz.subject } });
+        clearInterval(state.quiz.interval);
+        state.quiz.sessionID = session.session_id;
+        state.quiz.index = 0;
+        state.quiz.score = 0;
+        state.quiz.lives = 3;
+        state.quiz.selected = null;
+        state.quiz.answered = false;
+        state.quiz.wrongInRow = 0;
+        state.quiz.skipsInRow = 0;
+        await fetchNextQuestion();
+        renderDashboard();
+        goTo('quiz');
+        showToast(`Started ${state.quiz.subject} quiz`, 'success');
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
     }
-    document.getElementById('submitAnswerBtn').addEventListener('click', () => {
+    async function submitAnswer() {
       if (state.quiz.selected === null) {
         showToast('Select an option before submitting', 'error');
         return;
       }
-      evaluateAnswer(false);
-    });
-    document.getElementById('nextQuestionBtn').addEventListener('click', nextQuestion);
+      if (!state.quiz.currentQuestion || !state.quiz.sessionID) {
+        showToast('No active quiz session', 'error');
+        return;
+      }
+      try {
+        const selectedAnswer = state.quiz.currentQuestion.options[state.quiz.selected];
+        const timeTaken = Math.max(0.1, state.quiz.expectedTimeSeconds - state.quiz.timer);
+        const resp = await apiRequest('/quiz/submit-answer', {
+          method: 'POST',
+          auth: true,
+          body: {
+            session_id: state.quiz.sessionID,
+            question_id: state.quiz.currentQuestion.id,
+            selected_answer: selectedAnswer,
+            time_taken_seconds: timeTaken,
+            wrong_in_row: state.quiz.wrongInRow,
+            skips_in_row: state.quiz.skipsInRow
+          }
+        });
+        clearInterval(state.quiz.interval);
+        state.quiz.answered = true;
+        const options = document.querySelectorAll('.quiz-option');
+        options.forEach((option, idx) => {
+          if (state.quiz.currentQuestion.options[idx] === resp.correct_answer) option.classList.add('correct');
+        });
+        if (resp.correct) {
+          state.quiz.score += 1;
+          state.quiz.wrongInRow = 0;
+          state.quiz.skipsInRow = 0;
+          showToast(`Correct! ELO ${resp.elo_change >= 0 ? '+' : ''}${resp.elo_change}`, 'success');
+        } else {
+          if (options[state.quiz.selected]) options[state.quiz.selected].classList.add('incorrect');
+          state.quiz.lives -= 1;
+          state.quiz.wrongInRow += 1;
+          document.getElementById('quizLives').textContent = state.quiz.lives;
+          showToast(`Incorrect. Correct: ${resp.correct_answer}`, 'error');
+        }
+        document.getElementById('submitAnswerBtn').disabled = true;
+        document.getElementById('nextQuestionBtn').disabled = state.quiz.lives <= 0;
+        if (state.quiz.lives <= 0) showToast(`Out of lives. Final score ${state.quiz.score}`, 'error');
+        await loadDashboard().catch(() => {});
+        renderDashboard();
+      } catch (err) {
+        showToast(err.message, 'error');
+      }
+    }
+    async function nextQuestion() {
+      if (state.quiz.lives <= 0) return;
+      state.quiz.index += 1;
+      await fetchNextQuestion();
+    }
+    async function resetQuiz(showMessage = false) {
+      clearInterval(state.quiz.interval);
+      state.quiz.currentQuestion = null;
+      state.quiz.index = 0;
+      state.quiz.lives = 3;
+      state.quiz.selected = null;
+      state.quiz.score = 0;
+      state.quiz.timer = 0;
+      state.quiz.answered = false;
+      state.quiz.sessionID = null;
+      state.quiz.wrongInRow = 0;
+      state.quiz.skipsInRow = 0;
+      renderQuizQuestion();
+      renderDashboard();
+      if (showMessage) showToast('Quiz reset. Start a new session from Subjects.', 'success');
+    }
+
     function initRouting() {
       const hashRoute = window.location.hash.replace('#', '');
       goTo(routes.some(r => r.key === hashRoute) ? hashRoute : 'landing');
@@ -638,11 +901,26 @@
         if (routes.some(r => r.key === next)) goTo(next);
       });
     }
-    initLanding();
+
+    window.goTo = goTo;
+    window.startQuiz = startQuiz;
+    window.selectOption = selectOption;
+    window.resetQuiz = resetQuiz;
+    window.handleGoogleAuth = handleGoogleAuth;
+    window.applyToken = applyToken;
+    window.logout = logout;
+
+    document.getElementById('submitAnswerBtn').addEventListener('click', submitAnswer);
+    document.getElementById('nextQuestionBtn').addEventListener('click', nextQuestion);
+    syncAuthInputs();
+    renderQuizQuestion();
+    renderLanding();
+    renderSubjects();
     renderDashboard();
     renderLeaderboard();
     renderAdmin();
     initRouting();
+    refreshAllData(false);
   </script>
 </body>
 </html>
