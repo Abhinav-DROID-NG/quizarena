@@ -59,6 +59,12 @@ func main() {
 	r.Use(middleware.RequestLogger(logger))
 	r.Use(middleware.RateLimitMiddleware(rate.Limit(10), 10))
 	r.Use(middleware.CORS(config.CORSOrigins(cfg.FrontendOrigin)))
+	if authRedisClient != nil {
+		r.Use(func(c *gin.Context) {
+			c.Set("redisClient", authRedisClient)
+			c.Next()
+		})
+	}
 
 	r.GET("/health", healthHandler.Health)
 
