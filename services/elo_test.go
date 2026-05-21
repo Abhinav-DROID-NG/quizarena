@@ -22,9 +22,13 @@ func TestPerformanceScore(t *testing.T) {
 	if timeScore != 0.5 {
 		t.Fatalf("expected time score 0.5 got %v", timeScore)
 	}
-	perf := engine.PerformanceScore(timeScore, true)
-	if math.Abs(perf-0.6) > 1e-9 {
-		t.Fatalf("expected performance 0.6 got %v", perf)
+	perfCorrect := engine.PerformanceScore(timeScore, true)
+	if math.Abs(perfCorrect-0.75) > 1e-9 {
+		t.Fatalf("expected performance 0.75 got %v", perfCorrect)
+	}
+	perfWrong := engine.PerformanceScore(timeScore, false)
+	if perfWrong != 0 {
+		t.Fatalf("expected performance 0 for wrong answer got %v", perfWrong)
 	}
 }
 

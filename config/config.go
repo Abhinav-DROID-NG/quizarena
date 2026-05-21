@@ -1,8 +1,10 @@
 package config
 
 import (
+	"bufio"
 	"math"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -20,6 +22,7 @@ type Config struct {
 }
 
 func Load() Config {
+	loadDotEnv(".env")
 	return Config{
 		Port:               getEnv("PORT", "8080"),
 		FrontendOrigin:     getEnv("FRONTEND_ORIGIN", "http://localhost:5500"),
@@ -29,6 +32,33 @@ func Load() Config {
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/quizarena?sslmode=disable"),
 		DBMaxConns:         getEnvAsInt32("DB_MAX_CONNS", 30),
 		ShutdownTimeoutSec: getEnvAsInt("SHUTDOWN_TIMEOUT_SEC", 10),
+	}
+}
+
+func loadDotEnv(path string) {
+	file, err := os.Open(filepath.Clean(path))
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		value = strings.TrimSpace(value)
+		value = strings.Trim(value, `"'`)
+		_ = os.Setenv(key, value)
 	}
 }
 

@@ -26,11 +26,11 @@ func (e *EloEngine) TimeScore(timeTakenSeconds, expectedTimeSeconds float64) flo
 }
 
 func (e *EloEngine) PerformanceScore(timeScore float64, correct bool) float64 {
-	correctness := 0.0
-	if correct {
-		correctness = 1
+	if !correct {
+		return 0
 	}
-	return (0.8 * timeScore) + (0.2 * correctness)
+	// For correct answers, base performance is 0.5 (average) + up to 0.5 for speed
+	return 0.5 + (0.5 * timeScore)
 }
 
 func (e *EloEngine) ExpectedProbability(userElo, questionElo int) float64 {
@@ -52,6 +52,12 @@ func (e *EloEngine) CalculateNewElo(userElo, questionElo int, d models.Difficult
 	expected := e.ExpectedProbability(userElo, questionElo)
 	k := e.KFactor(d)
 	change := int(math.Round(k * (performance - expected)))
+
+	// If performance is 0 (wrong answer), ensure delta is at least -1
+	if performance == 0 && change >= 0 {
+		change = -1
+	}
+
 	return userElo + change, change
 }
 

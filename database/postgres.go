@@ -33,16 +33,79 @@ func (c *Client) UpsertOAuthUser(ctx context.Context, sub, email, name, picture 
 	const q = `
 INSERT INTO users (google_sub, email, name, picture)
 VALUES ($1, $2, $3, $4)
-ON CONFLICT (google_sub)
-DO UPDATE SET email = EXCLUDED.email, name = EXCLUDED.name, picture = EXCLUDED.picture, updated_at = NOW()
+ON CONFLICT (email)
+DO UPDATE SET google_sub = COALESCE(users.google_sub, EXCLUDED.google_sub),
+              name = EXCLUDED.name,
+              picture = COALESCE(users.picture, EXCLUDED.picture),
+              updated_at = NOW()
 RETURNING id, google_sub, email, name, picture, current_elo, peak_elo,
 accuracy_percentage, average_response_time, total_questions_solved, strongest_subject, weakest_subject`
 	var u models.User
+	var gSub, pic *string
 	err := c.Pool.QueryRow(ctx, q, sub, email, name, picture).Scan(
-		&u.ID, &u.GoogleSub, &u.Email, &u.Name, &u.Picture, &u.CurrentElo, &u.PeakElo,
+		&u.ID, &gSub, &u.Email, &u.Name, &pic, &u.CurrentElo, &u.PeakElo,
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
 	)
-	return u, err
+	if err != nil {
+		return u, err
+	}
+	if gSub != nil {
+		u.GoogleSub = *gSub
+	}
+	if pic != nil {
+		u.Picture = *pic
+	}
+	return u, nil
+}
+
+func (c *Client) CreateUser(ctx context.Context, email, passwordHash, name string) (models.User, error) {
+	const q = `
+INSERT INTO users (email, password_hash, name)
+VALUES ($1, $2, $3)
+RETURNING id, google_sub, email, name, picture, current_elo, peak_elo,
+accuracy_percentage, average_response_time, total_questions_solved, strongest_subject, weakest_subject`
+	var u models.User
+	var gSub, pic *string
+	err := c.Pool.QueryRow(ctx, q, email, passwordHash, name).Scan(
+		&u.ID, &gSub, &u.Email, &u.Name, &pic, &u.CurrentElo, &u.PeakElo,
+		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
+	)
+	if err != nil {
+		return u, err
+	}
+	if gSub != nil {
+		u.GoogleSub = *gSub
+	}
+	if pic != nil {
+		u.Picture = *pic
+	}
+	return u, nil
+}
+
+func (c *Client) GetUserByEmail(ctx context.Context, email string) (models.User, string, error) {
+	const q = `SELECT id, google_sub, email, name, picture, current_elo, peak_elo,
+accuracy_percentage, average_response_time, total_questions_solved, strongest_subject, weakest_subject, password_hash
+FROM users WHERE email = $1`
+	var u models.User
+	var gSub, picture, pwHash *string
+	err := c.Pool.QueryRow(ctx, q, email).Scan(
+		&u.ID, &gSub, &u.Email, &u.Name, &picture, &u.CurrentElo, &u.PeakElo,
+		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject, &pwHash,
+	)
+	if err != nil {
+		return u, "", err
+	}
+	if gSub != nil {
+		u.GoogleSub = *gSub
+	}
+	if picture != nil {
+		u.Picture = *picture
+	}
+	hash := ""
+	if pwHash != nil {
+		hash = *pwHash
+	}
+	return u, hash, nil
 }
 
 func (c *Client) GetUserByID(ctx context.Context, userID int64) (models.User, error) {
@@ -50,11 +113,21 @@ func (c *Client) GetUserByID(ctx context.Context, userID int64) (models.User, er
 accuracy_percentage, average_response_time, total_questions_solved, strongest_subject, weakest_subject
 FROM users WHERE id = $1`
 	var u models.User
+	var gSub, picture *string
 	err := c.Pool.QueryRow(ctx, q, userID).Scan(
-		&u.ID, &u.GoogleSub, &u.Email, &u.Name, &u.Picture, &u.CurrentElo, &u.PeakElo,
+		&u.ID, &gSub, &u.Email, &u.Name, &picture, &u.CurrentElo, &u.PeakElo,
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
 	)
-	return u, err
+	if err != nil {
+		return u, err
+	}
+	if gSub != nil {
+		u.GoogleSub = *gSub
+	}
+	if picture != nil {
+		u.Picture = *picture
+	}
+	return u, nil
 }
 
 func (c *Client) CreateSession(ctx context.Context, userID int64, subject string) (int64, error) {
@@ -154,9 +227,16 @@ ORDER BY u.current_elo DESC LIMIT $2`
 	users := make([]models.User, 0, limit)
 	for rows.Next() {
 		var u models.User
-		if err := rows.Scan(&u.ID, &u.GoogleSub, &u.Email, &u.Name, &u.Picture, &u.CurrentElo, &u.PeakElo,
+		var gSub, pic *string
+		if err := rows.Scan(&u.ID, &gSub, &u.Email, &u.Name, &pic, &u.CurrentElo, &u.PeakElo,
 			&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject); err != nil {
 			return nil, err
+		}
+		if gSub != nil {
+			u.GoogleSub = *gSub
+		}
+		if pic != nil {
+			u.Picture = *pic
 		}
 		users = append(users, u)
 	}

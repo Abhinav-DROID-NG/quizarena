@@ -48,10 +48,21 @@ func main() {
 	r.Use(middleware.RateLimitMiddleware(rate.Limit(10), 10))
 	r.Use(middleware.CORS(config.CORSOrigins(cfg.FrontendOrigin)))
 
+	r.GET("/", func(c *gin.Context) {
+		c.File("frontend/quizarena.html")
+	})
+	r.GET("/app-config", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"google_client_id": cfg.GoogleClientID,
+		})
+	})
+	r.Static("/frontend", "./frontend")
 	r.GET("/health", healthHandler.Health)
 
 	auth := r.Group("/auth")
 	{
+		auth.POST("/register", authHandler.Register)
+		auth.POST("/login", authHandler.Login)
 		auth.POST("/google", authHandler.GoogleAuth)
 		auth.POST("/logout", authHandler.Logout)
 		auth.GET("/me", middleware.JWTAuth(tokenManager), authHandler.Me)
