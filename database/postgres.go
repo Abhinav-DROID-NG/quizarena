@@ -294,3 +294,20 @@ func (c *Client) DeleteQuestion(ctx context.Context, id int64) error {
 	}
 	return nil
 }
+
+func (c *Client) ListSubjects(ctx context.Context) ([]string, error) {
+	rows, err := c.Pool.Query(ctx, `SELECT DISTINCT subject FROM questions ORDER BY subject`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var subjects []string
+	for rows.Next() {
+		var s string
+		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		subjects = append(subjects, s)
+	}
+	return subjects, rows.Err()
+}

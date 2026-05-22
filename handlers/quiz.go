@@ -159,3 +159,12 @@ func (h *QuizHandler) SessionHistory(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, session)
 }
+
+func (h *QuizHandler) ListSubjects(c *gin.Context) {
+	subjects, err := h.DB.ListSubjects(c.Request.Context())
+	if err != nil {
+		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to list subjects")
+		return
+	}
+	c.JSON(http.StatusOK, subjects)
+}

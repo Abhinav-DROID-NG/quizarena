@@ -79,6 +79,7 @@ func main() {
 	r.GET("/leaderboard", leaderboardHandler.Global)
 	r.GET("/leaderboard/subject/:subject", leaderboardHandler.BySubject)
 	r.GET("/leaderboard/user/:id", leaderboardHandler.UserRank)
+	r.GET("/subjects", quizHandler.ListSubjects)
 
 	user := r.Group("/user", middleware.JWTAuth(tokenManager))
 	{
