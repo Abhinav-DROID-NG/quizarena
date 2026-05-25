@@ -1,9 +1,29 @@
+# Logs and runtime files
 backend.log
 backend.pid
+
+# Binaries and executables
 quizarena_bin
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+
+# Python files (if accidentally added)
 *.py
+__pycache__/
+*.pyc
+*.pyo
+venv/
+env/
+
+# Local scripts
+setup.sh
+
+# IDE and OS files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
