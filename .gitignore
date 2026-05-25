@@ -6,3 +6,4 @@ quizarena_bin
 *.dll
 *.so
 *.dylib
+*.py
