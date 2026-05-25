@@ -10,6 +10,8 @@ frontend.log
 *.pid
 backend.pid
 frontend.pid
+*.sh 
+*.json
 
 # Binaries, executables, shared objects
 quizarena_bin
