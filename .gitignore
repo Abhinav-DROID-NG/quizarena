@@ -1,29 +1,66 @@
-# Logs and runtime files
-backend.log
-backend.pid
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
 
-# Binaries and executables
+# Logs & runtime files
+*.log
+backend.log
+frontend.log
+*.pid
+backend.pid
+frontend.pid
+
+# Binaries, executables, shared objects
 quizarena_bin
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+*.out
+*.test
+*.o
+*.a
 
-# Python files (if accidentally added)
+# Python files (not needed for Go project)
 *.py
-__pycache__/
 *.pyc
 *.pyo
+__pycache__/
 venv/
 env/
+.venv/
 
-# Local scripts
-setup.sh
-
-# IDE and OS files
-.DS_Store
+# IDE and editor files
 .vscode/
 .idea/
 *.swp
 *.swo
+*~
+*.iml
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build & temporary files
+dist/
+build/
+tmp/
+*.tmp
+*.bak
+
+# Testing
+coverage.out
+*.coverprofile
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Go build cache
+/vendor/
