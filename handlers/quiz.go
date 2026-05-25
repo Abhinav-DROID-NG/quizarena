@@ -26,12 +26,12 @@ type StartQuizRequest struct {
 }
 
 type SubmitAnswerRequest struct {
-	SessionID    int64   `json:"session_id" binding:"required"`
-	QuestionID   int64   `json:"question_id" binding:"required"`
-	Selected     string  `json:"selected_answer" binding:"required"`
-	TimeTakenSec float64 `json:"time_taken_seconds" binding:"required"`
-	SkipsInRow   int     `json:"skips_in_row"`
-	WrongInRow   int     `json:"wrong_in_row"`
+	SessionID    int64    `json:"session_id" binding:"required"`
+	QuestionID   int64    `json:"question_id" binding:"required"`
+	Selected     []string `json:"selected_answers" binding:"required"`
+	TimeTakenSec float64  `json:"time_taken_seconds" binding:"required"`
+	SkipsInRow   int      `json:"skips_in_row"`
+	WrongInRow   int      `json:"wrong_in_row"`
 }
 
 func getUserID(c *gin.Context) (int64, bool) {
@@ -112,7 +112,22 @@ func (h *QuizHandler) SubmitAnswer(c *gin.Context) {
 		return
 	}
 
-	correct := req.Selected == question.CorrectAnswer
+	correct := true
+	if len(req.Selected) != len(question.CorrectAnswers) {
+		correct = false
+	} else {
+		m := make(map[string]bool)
+		for _, v := range question.CorrectAnswers {
+			m[v] = true
+		}
+		for _, v := range req.Selected {
+			if !m[v] {
+				correct = false
+				break
+			}
+		}
+	}
+
 	timeScore := h.Elo.TimeScore(req.TimeTakenSec, question.ExpectedTimeSeconds)
 	performance := h.Elo.PerformanceScore(timeScore, correct)
 	_, eloChange := h.Elo.CalculateNewElo(user.CurrentElo, question.QuestionElo, question.Difficulty, performance)
@@ -122,14 +137,14 @@ func (h *QuizHandler) SubmitAnswer(c *gin.Context) {
 	nextDiff := h.Elo.NextQuestionDifficulty(newElo, nextTarget)
 	confidence := h.Elo.ConfidenceScore(correct, timeScore, req.WrongInRow, req.SkipsInRow)
 
-	if err := h.DB.SaveAnswerAndUpdateStats(c.Request.Context(), req.SessionID, req.QuestionID, uid, req.Selected, question.CorrectAnswer, req.TimeTakenSec, timeScore, performance, eloChange, newElo); err != nil {
+	if err := h.DB.SaveAnswerAndUpdateStats(c.Request.Context(), req.SessionID, req.QuestionID, uid, req.Selected, question.CorrectAnswers, req.TimeTakenSec, timeScore, performance, eloChange, newElo); err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to persist answer")
 		return
 	}
 
 	resp := models.AnswerResponse{
 		Correct:                correct,
-		CorrectAnswer:          question.CorrectAnswer,
+		CorrectAnswers:         question.CorrectAnswers,
 		TimeTaken:              req.TimeTakenSec,
 		TimeScore:              timeScore,
 		PerformanceScore:       performance,

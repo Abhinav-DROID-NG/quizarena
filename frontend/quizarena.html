@@ -7,7 +7,12 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=DM+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<!-- KaTeX for LaTeX rendering -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
+
 :root {
   --bg0: #080808;
   --bg1: #0e0e0e;
@@ -331,13 +336,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
 .quiz-options{display:flex;flex-direction:column;gap:10px;margin-bottom:32px}
 .quiz-option{display:flex;align-items:flex-start;gap:14px;background:var(--bg1);border:0.5px solid var(--b1);border-radius:var(--r);padding:16px 18px;cursor:pointer;transition:all 0.2s;text-align:left;width:100%}
 .quiz-option:hover{border-color:var(--b3);background:var(--bg2)}
-.quiz-option.selected{border-color:var(--gold);background:var(--gold4)}
-.quiz-option.correct{border-color:var(--green);background:var(--green2);pointer-events:none}
-.quiz-option.wrong{border-color:var(--red);background:var(--red2);pointer-events:none}
-.option-key{width:28px;height:28px;flex-shrink:0;border-radius:4px;background:var(--bg3);border:0.5px solid var(--b2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:500;color:var(--text2);transition:all 0.2s}
-.quiz-option.selected .option-key{background:var(--gold);border-color:var(--gold);color:var(--bg0)}
-.quiz-option.correct .option-key{background:var(--green);border-color:var(--green);color:var(--bg0)}
-.quiz-option.wrong .option-key{background:var(--red);border-color:var(--red);color:var(--bg0)}
+.quiz-option.selected { border-color: var(--blue); background: var(--blue2); }
+.quiz-option.selected .option-key { background: var(--blue); border-color: var(--blue); color: var(--bg0); }
+.quiz-option.correct { border-color: var(--green); background: var(--green2); pointer-events: none; }
+.quiz-option.correct .option-key { background: var(--green); border-color: var(--green); color: var(--bg0); }
+.quiz-option.wrong { border-color: var(--red); background: var(--red2); pointer-events: none; }
+.quiz-option.wrong .option-key { background: var(--red); border-color: var(--red); color: var(--bg0); }
 .option-text{font-size:14px;color:var(--text1);line-height:1.6;padding-top:4px}
 
 .quiz-actions{display:flex;justify-content:space-between;align-items:center}
@@ -407,12 +411,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
       </div>
       <div class="hero-stats">
         <div>
-          <div class="hero-stat-n">1,821</div>
+          <div class="hero-stat-n">3,524</div>
           <div class="hero-stat-l">Questions</div>
         </div>
         <div>
-          <div class="hero-stat-n">3</div>
-          <div class="hero-stat-l">Core Topics</div>
+          <div class="hero-stat-n">1</div>
+          <div class="hero-stat-l">Core Topic</div>
         </div>
         <div>
           <div class="hero-stat-n">18,500</div>
@@ -439,7 +443,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
         <div class="feat-card">
           <div class="feat-icon">🎯</div>
           <div class="feat-title">3 Core Subjects</div>
-          <div class="feat-desc">Complete coverage from Quantitative to Verbal Ability. Subject-wise accuracy tracking to find and fix weak spots.</div>
+          <div class="feat-desc">Complete coverage of Aptitude and core Computer Science subjects. Subject-wise accuracy tracking to find and fix weak spots.</div>
         </div>
         <div class="feat-card">
           <div class="feat-icon">📊</div>
@@ -471,9 +475,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
       <div class="section-label">Coverage</div>
       <h2 class="section-title">Aptitude <em>Subjects</em></h2>
       <div class="subjects-scroll">
-        <div class="subj-chip" onclick="goto('home')">Quantitative Aptitude <span class="subj-chip-count">907q</span></div>
-        <div class="subj-chip" onclick="goto('home')">Logical Reasoning <span class="subj-chip-count">630q</span></div>
-        <div class="subj-chip" onclick="goto('home')">Verbal Ability <span class="subj-chip-count">284q</span></div>
+        <div class="subj-chip" onclick="goto('home')">Aptitude <span class="subj-chip-count">3,524q</span></div>
       </div>
     </div>
   </section>
@@ -770,9 +772,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
           <div>
             <label class="form-label">Subject</label>
             <select class="admin-select" id="admin-subject-select">
-              <option>Logical Reasoning</option>
-              <option>Quantitative Aptitude</option>
-              <option>Verbal Ability</option>
+              <option>Aptitude</option>
             </select>
           </div>
           <div>
@@ -898,7 +898,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
     <div class="subjects-header">
       <div class="section-label" style="text-align:center">Practice Arena</div>
       <h1 class="section-title" style="text-align:center">Choose your <em>subject</em></h1>
-      <p class="section-sub" style="margin:0 auto;text-align:center">1,821 aptitude questions across 3 core topics. Each quiz adapts to your current ELO rating.</p>
+      <p class="section-sub" style="margin:0 auto;text-align:center">Over 3,500 high-quality questions focused on Aptitude. Each quiz adapts to your current ELO rating.</p>
     </div>
 
     <div class="subjects-grid" id="subjects-grid">
@@ -1108,6 +1108,7 @@ const APP = {
       lastResult: null,
       correctCount: 0,
       eloTotal: 0,
+      selectedKeys: [],
     },
   },
 };
@@ -1585,12 +1586,47 @@ function renderDashboard() {
 async function loadLeaderboard() {
   APP.state.leaderboard = await api('/leaderboard?limit=25', { headers: {} });
   renderLeaderboard();
+  renderLeaderboardPreview();
+}
+
+function renderLeaderboardPreview() {
+  const preview = qs('.lb-preview-table');
+  if (!preview) return;
+  let leaders = APP.state.leaderboard || [];
+  const baron = { name: "Baron Arthur Grey", current_elo: 3200, accuracy_percentage: 100, total_questions_solved: 580, average_response_time: 0.1, strongest_subject: "All Subjects" };
+  leaders = [baron, ...leaders.filter(l => l.name !== baron.name)];
+  const rows = leaders.slice(0, 5).map((user, index) => {
+    const rank = index + 1;
+    const rankClass = rank <= 3 ? `r${rank}` : '';
+    return `
+      <div class="lb-row">
+        <span class="lb-rank ${rankClass}">${String(rank).padStart(2, '0')}</span>
+        <span class="lb-name">${escapeHtml(user.name || user.email || 'Player')}</span>
+        <span class="lb-elo">${user.current_elo}</span>
+        <span class="lb-acc">${formatPct(user.accuracy_percentage)}</span>
+      </div>
+    `;
+  }).join('');
+  preview.innerHTML = `<div class="lb-row lb-header"><span>#</span><span>Player</span><span>ELO</span><span>Accuracy</span></div>${rows || '<div class="lb-row"><span>--</span><span class="lb-name">No data</span><span>--</span><span>--</span></div>'}`;
 }
 
 function renderLeaderboard() {
   const page = qs('#page-leaderboard .container.page-body');
   if (!page) return;
-  const leaders = APP.state.leaderboard || [];
+  let leaders = APP.state.leaderboard || [];
+  
+  // Inject Baron Arthur Grey at the top
+  const baron = {
+    name: "Baron Arthur Grey",
+    current_elo: 3200,
+    accuracy_percentage: 100,
+    total_questions_solved: 580,
+    average_response_time: 0.1,
+    strongest_subject: "All Subjects",
+    id: -1
+  };
+  leaders = [baron, ...leaders.filter(l => l.name !== baron.name)];
+
   const podium = leaders.slice(0, 3);
   const podiumOrder = [1, 0, 2];
   const podiumClass = ['second', 'first', 'third'];
@@ -1635,7 +1671,7 @@ function renderLeaderboard() {
     <div class="lb-page-header">
       <div class="section-label" style="text-align:center">Global Rankings</div>
       <h1 class="section-title" style="text-align:center">The <em>Arena</em> Leaderboard</h1>
-      <p class="section-sub" style="text-align:center;margin:0 auto">Live backend data from <code>/leaderboard</code></p>
+      <p class="section-sub" style="text-align:center;margin:0 auto">Live backend data with legendary performers</p>
     </div>
     <div class="top3-podium">${podiumHTML}</div>
     <div class="lb-full-table">
@@ -1647,11 +1683,35 @@ function renderLeaderboard() {
 
 function getSubjectMeta(subject) {
   const meta = {
-    'Logical Reasoning': { icon: '🧠', full: 'Logical Reasoning', questions: 630, diff: 'Medium' },
-    'Quantitative Aptitude': { icon: '🔢', full: 'Quantitative Aptitude', questions: 5592, diff: 'Medium' },
-    'Verbal Ability': { icon: '📝', full: 'Verbal Ability', questions: 284, diff: 'Medium' }
+    'Engineering Mathematics': { icon: '∑', full: 'Engineering Mathematics', questions: 16, diff: 'Hard' },
+    'Digital Logic': { icon: '01', full: 'Digital Logic', questions: 31, diff: 'Medium' },
+    'Computer Organization and Architecture': { icon: '⚙️', full: 'COA', questions: 77, diff: 'Hard' },
+    'Programming and Data Structures': { icon: '💻', full: 'DS & Programming', questions: 24, diff: 'Medium' },
+    'Algorithms': { icon: '⚧', full: 'Algorithms', questions: 27, diff: 'Hard' },
+    'Theory of Computation': { icon: '♾', full: 'Theory of Computation', questions: 8, diff: 'Hard' },
+    'Compiler Design': { icon: '🏗', full: 'Compiler Design', questions: 4, diff: 'Medium' },
+    'Operating System': { icon: '🖥', full: 'Operating System', questions: 8, diff: 'Medium' },
+    'Databases': { icon: '🗄', full: 'Databases (SQL)', questions: 14, diff: 'Medium' },
+    'Computer Networks': { icon: '🌐', full: 'Computer Networks', questions: 28, diff: 'Medium' },
+    'Aptitude': { icon: '🔢', full: 'Aptitude', questions: 4563, diff: 'Medium' },
+    'General Aptitude': { icon: '🧠', full: 'General Aptitude', questions: 104, diff: 'Easy' }
   };
-  return meta[subject] || { icon: '📚', full: subject, questions: 'Auto', diff: 'Adaptive' };
+  return meta[subject] || { icon: '📚', full: subject, questions: '...', diff: 'Adaptive' };
+}
+
+async function loadLandingStats() {
+  try {
+    const stats = await api('/stats', { headers: {} });
+    const statsNodes = qsa('.hero-stat-n');
+    if (statsNodes.length >= 4) {
+      statsNodes[0].textContent = stats.total_questions.toLocaleString();
+      statsNodes[1].textContent = stats.total_subjects.toLocaleString();
+      statsNodes[2].textContent = stats.total_users.toLocaleString();
+      statsNodes[3].textContent = formatPct(stats.success_rate);
+    }
+  } catch (error) {
+    console.error('Failed to load landing stats:', error);
+  }
 }
 
 async function renderSubjects() {
@@ -1660,52 +1720,61 @@ async function renderSubjects() {
   
   let subjects = [];
   try {
-    subjects = await api('/subjects');
+    subjects = await api('/subjects-detailed', { headers: {} });
   } catch (error) {
-    showToast('Failed to load subjects from server');
-    subjects = ['Quantitative Aptitude']; // Fallback
+    console.error('Failed to load subjects:', error);
   }
+
+  const defaultSubjects = [
+    { subject: 'Aptitude', question_count: 0 }
+  ];
+
+  const displaySubjects = subjects.length > 0 ? subjects : defaultSubjects;
 
   // Update Landing page chips
   const scroll = qs('.subjects-scroll');
   if (scroll) {
-    scroll.innerHTML = subjects.map(s => {
-      const m = getSubjectMeta(s);
-      return `<div class="subj-chip" onclick="goto('home')">${escapeHtml(s)} <span class="subj-chip-count">${m.questions}q</span></div>`;
+    scroll.innerHTML = displaySubjects.map(s => {
+      const m = getSubjectMeta(s.subject);
+      return `<div class="subj-chip" onclick="goto('home')">${escapeHtml(s.subject)} <span class="subj-chip-count">${s.question_count || '...'}q</span></div>`;
     }).join('');
   }
 
-  // Update Admin subject select
+  // Update Admin subject select (if it exists in the current view)
   const adminSelect = qs('#admin-subject-select');
   if (adminSelect) {
-    adminSelect.innerHTML = subjects.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+    adminSelect.innerHTML = displaySubjects.map(s => `<option value="${escapeHtml(s.subject)}">${escapeHtml(s.subject)}</option>`).join('');
   }
   
-  grid.innerHTML = subjects.map(s => {
-    const m = getSubjectMeta(s);
-    return `
-      <div class="subject-card" onclick="startQuizForSubject('${s}')">
-        <div class="subject-card-inner">
-          <div class="subj-icon-wrap">${m.icon}</div>
-          <div class="subj-name">${escapeHtml(s)}</div>
-          <div class="subj-full">${escapeHtml(m.full)}</div>
-          <div class="subj-meta">
-            <div class="subj-meta-item"><strong>${m.questions}</strong> questions</div>
-            <div class="subj-meta-item"><strong>${m.diff}</strong> difficulty</div>
+  if (subjects.length === 0) {
+    grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text3);">No subjects with questions found in the database. Add some in the Admin panel!</div>';
+  } else {
+    grid.innerHTML = subjects.map(s => {
+      const m = getSubjectMeta(s.subject);
+      return `
+        <div class="subject-card" onclick="startQuizForSubject('${s.subject}')">
+          <div class="subject-card-inner">
+            <div class="subj-icon-wrap">${m.icon}</div>
+            <div class="subj-name">${escapeHtml(s.subject)}</div>
+            <div class="subj-full">${escapeHtml(m.full)}</div>
+            <div class="subj-meta">
+              <div class="subj-meta-item"><strong>${s.question_count}</strong> questions</div>
+              <div class="subj-meta-item"><strong>${m.diff}</strong> difficulty</div>
+            </div>
+            <div class="subj-diff-bar">
+              <div class="diff-seg fill-easy"></div>
+              <div class="diff-seg fill-easy"></div>
+              <div class="diff-seg fill-med"></div>
+              <div class="diff-seg fill-med"></div>
+              <div class="diff-seg fill-hard"></div>
+              <div class="diff-seg fill-hard"></div>
+            </div>
+            <button class="start-quiz-btn">Start Quiz →</button>
           </div>
-          <div class="subj-diff-bar">
-            <div class="diff-seg fill-easy"></div>
-            <div class="diff-seg fill-easy"></div>
-            <div class="diff-seg fill-med"></div>
-            <div class="diff-seg fill-med"></div>
-            <div class="diff-seg fill-hard"></div>
-            <div class="diff-seg fill-hard"></div>
-          </div>
-          <button class="start-quiz-btn">Start Quiz →</button>
         </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
 }
 
 function subjectFromCard(card) {
@@ -1750,14 +1819,16 @@ function renderQuizQuestion() {
   const quiz = APP.state.quiz;
   const question = quiz.currentQuestion;
   if (!question) return;
-  qs('.quiz-subject-tag').textContent = `${quiz.subject} · ${String(question.difficulty || '').toUpperCase()}`;
+  quiz.selectedKeys = [];
+  qs('.quiz-subject-tag').textContent = `${quiz.subject} · ${String(question.type || 'MCQ')} · ${String(question.difficulty || '').toUpperCase()}`;
   qs('#q-num').textContent = String(quiz.index);
   qs('.quiz-q-label').textContent = `Question ${quiz.index}`;
   qs('#quiz-prog-fill').style.width = `${(quiz.index / APP.quizLength) * 100}%`;
-  qs('#quiz-question').textContent = question.question_text;
-  qs('#quiz-hint').textContent = 'Select an answer to continue';
+  qs('#quiz-question').innerHTML = escapeHtml(question.question_text).replace(/\n/g, '<br>');
+  qs('#quiz-hint').textContent = question.type === 'MSQ' ? 'Select one or more answers then Confirm' : 'Select an answer to continue';
   qs('#quiz-next-btn').style.display = 'none';
-  qs('#quiz-submit-btn').style.display = quiz.index >= APP.quizLength ? 'inline-flex' : 'none';
+  qs('#quiz-submit-btn').style.display = 'none';
+  
   const options = qs('#quiz-options');
   options.innerHTML = '';
   (question.options || []).forEach((option, index) => {
@@ -1766,9 +1837,47 @@ function renderQuizQuestion() {
     button.className = 'quiz-option';
     button.type = 'button';
     button.innerHTML = `<span class="option-key">${key}</span><span class="option-text">${escapeHtml(option)}</span>`;
-    button.addEventListener('click', () => submitQuizAnswer(key, button, false).catch((error) => showToast(error.message)));
+    button.addEventListener('click', () => {
+      if (APP.state.answered) return;
+      if (question.type === 'MSQ') {
+        button.classList.toggle('selected');
+        if (quiz.selectedKeys.includes(key)) {
+          quiz.selectedKeys = quiz.selectedKeys.filter(k => k !== key);
+        } else {
+          quiz.selectedKeys.push(key);
+        }
+        qs('#quiz-confirm-btn').style.display = quiz.selectedKeys.length > 0 ? 'inline-flex' : 'none';
+      } else {
+        quiz.selectedKeys = [key];
+        submitQuizAnswer().catch((error) => showToast(error.message));
+      }
+    });
     options.appendChild(button);
   });
+
+  // Add Confirm button for MSQs
+  if (question.type === 'MSQ') {
+    const confirmBtn = document.createElement('button');
+    confirmBtn.id = 'quiz-confirm-btn';
+    confirmBtn.className = 'btn btn-gold';
+    confirmBtn.style.display = 'none';
+    confirmBtn.style.marginTop = '20px';
+    confirmBtn.textContent = 'Confirm Selection';
+    confirmBtn.onclick = () => submitQuizAnswer().catch((error) => showToast(error.message));
+    options.appendChild(confirmBtn);
+  }
+
+  if (window.renderMathInElement) {
+    renderMathInElement(qs('#page-quiz'), {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+      ],
+      throwOnError: false
+    });
+  }
   updateTimerDisplay();
 }
 
@@ -1794,22 +1903,25 @@ function startTimer() {
   }, 1000);
 }
 
-async function submitQuizAnswer(selected, selectedEl, timedOut) {
+async function submitQuizAnswer(timedOut = false) {
   if (APP.state.answered) return;
   APP.state.answered = true;
   stopTimer();
   const quiz = APP.state.quiz;
+  const question = quiz.currentQuestion;
+  const selected = timedOut ? [] : quiz.selectedKeys;
   const secondsTaken = Math.max(1, (Date.now() - quiz.startedAt) / 1000);
-  const projectedWrongInRow = timedOut ? quiz.wrongInRow + 1 : quiz.wrongInRow;
-  const projectedSkipsInRow = timedOut ? quiz.skipsInRow + 1 : quiz.skipsInRow;
+  const projectedWrongInRow = timedOut || selected.length === 0 ? quiz.wrongInRow + 1 : quiz.wrongInRow;
+  const projectedSkipsInRow = timedOut || selected.length === 0 ? quiz.skipsInRow + 1 : quiz.skipsInRow;
+  
   let result;
   try {
     result = await api('/quiz/submit-answer', {
       method: 'POST',
       body: JSON.stringify({
         session_id: quiz.sessionId,
-        question_id: quiz.currentQuestion.id,
-        selected_answer: selected,
+        question_id: question.id,
+        selected_answers: selected,
         time_taken_seconds: secondsTaken,
         skips_in_row: projectedSkipsInRow,
         wrong_in_row: projectedWrongInRow,
@@ -1819,30 +1931,41 @@ async function submitQuizAnswer(selected, selectedEl, timedOut) {
     APP.state.answered = false;
     throw error;
   }
+  
   quiz.lastResult = result;
-  const correctKey = result.correct_answer;
+  const correctKeys = result.correct_answers || [];
+  const confirmBtn = qs('#quiz-confirm-btn');
+  if (confirmBtn) confirmBtn.style.display = 'none';
+
   qsa('#quiz-options .quiz-option').forEach((opt) => {
     const key = qs('.option-key', opt).textContent;
-    if (key === correctKey) opt.classList.add('correct');
-    else if (selectedEl && opt === selectedEl) opt.classList.add('wrong');
+    if (correctKeys.includes(key)) {
+      opt.classList.add('correct');
+      opt.classList.remove('selected');
+    } else if (selected.includes(key)) {
+      opt.classList.add('wrong');
+    }
     opt.disabled = true;
   });
+
   if (timedOut) {
     quiz.skipsInRow = projectedSkipsInRow;
     quiz.wrongInRow = projectedWrongInRow;
-    qs('#quiz-hint').textContent = `Time up. Correct answer: ${correctKey}`;
+    qs('#quiz-hint').textContent = `Time up. Correct: ${correctKeys.join(', ')}`;
   } else if (result.correct) {
     quiz.correctCount += 1;
     quiz.wrongInRow = 0;
     quiz.skipsInRow = 0;
-    qs('#quiz-hint').textContent = `Correct. ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO`;
+    qs('#quiz-hint').textContent = `Correct! ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO`;
   } else {
     quiz.wrongInRow += 1;
     quiz.skipsInRow = 0;
-    qs('#quiz-hint').textContent = `Incorrect. Correct answer: ${correctKey}`;
+    qs('#quiz-hint').textContent = `Incorrect. Correct: ${correctKeys.join(', ')}`;
   }
+  
   quiz.eloTotal += result.elo_change;
-  showToast(result.correct ? `Correct. ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO` : `Answered. ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO`);
+  showToast(result.correct ? `Correct! ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO` : `Incorrect. ${result.elo_change >= 0 ? '+' : ''}${result.elo_change} ELO`);
+  
   if (quiz.index >= APP.quizLength) {
     qs('#quiz-next-btn').style.display = 'none';
     qs('#quiz-submit-btn').style.display = 'inline-flex';
@@ -1880,7 +2003,13 @@ function renderAdmin() {
     <div class="admin-card">
       <div class="admin-card-title">Add New Question <span class="tag">live</span></div>
       <div class="admin-form-row">
-        <div><label class="form-label">Subject</label><input class="form-input" id="admin-subject" placeholder="DBMS"></div>
+        <div>
+          <label class="form-label">Subject</label>
+          <select class="admin-select" id="admin-subject-select">
+            <!-- Populated by renderSubjects() -->
+          </select>
+          <input class="form-input" id="admin-subject-custom" placeholder="Or type new subject..." style="margin-top: 8px;">
+        </div>
         <div><label class="form-label">Difficulty</label><select class="admin-select" id="admin-difficulty"><option value="easy">easy</option><option value="medium">medium</option><option value="hard">hard</option></select></div>
       </div>
       <div class="admin-form-row full"><div><label class="form-label">Question</label><textarea class="admin-textarea" id="admin-question-text" placeholder="Enter the question text here..."></textarea></div></div>
@@ -1910,11 +2039,16 @@ function renderAdmin() {
     </div>
   `;
   qs('#admin-add-question-btn').addEventListener('click', () => addQuestion().catch((error) => showToast(error.message)));
+  renderSubjects(); // Refresh subjects and populate the select
 }
 
 async function addQuestion() {
+  const subjectCustom = qs('#admin-subject-custom').value.trim();
+  const subjectSelect = qs('#admin-subject-select').value;
+  const subject = subjectCustom || subjectSelect;
+
   const payload = {
-    subject: qs('#admin-subject').value.trim(),
+    subject: subject,
     difficulty: qs('#admin-difficulty').value,
     question_text: qs('#admin-question-text').value.trim(),
     options: [qs('#admin-option-a').value.trim(), qs('#admin-option-b').value.trim(), qs('#admin-option-c').value.trim(), qs('#admin-option-d').value.trim()],
@@ -1931,7 +2065,9 @@ async function addQuestion() {
     body: JSON.stringify(payload),
   });
   showToast('Question added');
+  qs('#admin-subject-custom').value = '';
   await loadAdminQuestions();
+  await renderSubjects(); // Refresh the list of subjects everywhere
 }
 
 async function loadAdminQuestions() {
@@ -1955,6 +2091,18 @@ async function loadAdminQuestions() {
       await loadAdminQuestions();
     });
   });
+
+  if (window.renderMathInElement) {
+    renderMathInElement(body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+      ],
+      throwOnError: false
+    });
+  }
 }
 
 function wireSubjectCards() {
@@ -1988,14 +2136,28 @@ function wireQuizButtons() {
 }
 
 async function init() {
+  loadLandingStats();
+  loadLeaderboard();
   renderSubjects();
   buildLoginCard();
   wireSubjectCards();
   wireQuizButtons();
   updateNavAuthButton();
   renderDashboard();
-  renderLeaderboard();
   renderAdmin();
+
+  if (window.renderMathInElement) {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+        {left: '\\(', right: '\\)', display: false},
+        {left: '\\[', right: '\\]', display: true}
+      ],
+      throwOnError: false
+    });
+  }
+
   try {
     await loadAppConfig();
     await initGoogleSignIn();

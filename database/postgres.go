@@ -144,27 +144,44 @@ func (c *Client) GetSession(ctx context.Context, sessionID, userID int64) (model
 
 func (c *Client) GetQuestionByID(ctx context.Context, questionID int64) (models.Question, error) {
 	var q models.Question
-	err := c.Pool.QueryRow(ctx, `SELECT id, subject, difficulty, question_text, options, correct_answer, question_elo, expected_time_seconds FROM questions WHERE id = $1`, questionID).Scan(
-		&q.ID, &q.Subject, &q.Difficulty, &q.QuestionText, &q.Options, &q.CorrectAnswer, &q.QuestionElo, &q.ExpectedTimeSeconds,
+	err := c.Pool.QueryRow(ctx, `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds FROM questions WHERE id = $1`, questionID).Scan(
+		&q.ID, &q.Subject, &q.Type, &q.Difficulty, &q.QuestionText, &q.Options, &q.CorrectAnswers, &q.QuestionElo, &q.ExpectedTimeSeconds,
 	)
 	return q, err
 }
 
 func (c *Client) GetAdaptiveQuestion(ctx context.Context, subject string, targetElo int) (models.Question, error) {
-	const q = `SELECT id, subject, difficulty, question_text, options, correct_answer, question_elo, expected_time_seconds
+	const q = `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds
 FROM questions
 WHERE ($1 = '' OR subject = $1)
 ORDER BY ABS(question_elo - $2), random()
 LIMIT 1`
 	var question models.Question
 	err := c.Pool.QueryRow(ctx, q, subject, targetElo).Scan(
-		&question.ID, &question.Subject, &question.Difficulty, &question.QuestionText, &question.Options, &question.CorrectAnswer, &question.QuestionElo, &question.ExpectedTimeSeconds,
+		&question.ID, &question.Subject, &question.Type, &question.Difficulty, &question.QuestionText, &question.Options, &question.CorrectAnswers, &question.QuestionElo, &question.ExpectedTimeSeconds,
 	)
 	return question, err
 }
 
-func (c *Client) SaveAnswerAndUpdateStats(ctx context.Context, sessionID, questionID, userID int64, selectedAnswer, correctAnswer string, timeTaken, timeScore, performance float64, eloChange, newElo int) error {
-	correct := selectedAnswer == correctAnswer
+func (c *Client) SaveAnswerAndUpdateStats(ctx context.Context, sessionID, questionID, userID int64, selectedAnswers, correctAnswers []string, timeTaken, timeScore, performance float64, eloChange, newElo int) error {
+	// Correctness check logic is moved to handler for more flexibility, or kept here if simple
+	correct := true
+	if len(selectedAnswers) != len(correctAnswers) {
+		correct = false
+	} else {
+		// Simple set comparison (assuming sorted or small enough)
+		m := make(map[string]bool)
+		for _, v := range correctAnswers {
+			m[v] = true
+		}
+		for _, v := range selectedAnswers {
+			if !m[v] {
+				correct = false
+				break
+			}
+		}
+	}
+
 	tx, err := c.Pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
 		return err
@@ -172,9 +189,9 @@ func (c *Client) SaveAnswerAndUpdateStats(ctx context.Context, sessionID, questi
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	_, err = tx.Exec(ctx, `INSERT INTO quiz_answers
-(session_id, question_id, user_id, selected_answer, correct, time_taken_seconds, time_score, performance_score, elo_change)
+(session_id, question_id, user_id, selected_answers, correct, time_taken_seconds, time_score, performance_score, elo_change)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
-		sessionID, questionID, userID, selectedAnswer, correct, timeTaken, timeScore, performance, eloChange,
+		sessionID, questionID, userID, selectedAnswers, correct, timeTaken, timeScore, performance, eloChange,
 	)
 	if err != nil {
 		return err
@@ -252,12 +269,12 @@ ORDER BY u.current_elo DESC LIMIT $2`
 func (c *Client) UpsertQuestion(ctx context.Context, q models.Question) (int64, error) {
 	if q.ID == 0 {
 		var id int64
-		err := c.Pool.QueryRow(ctx, `INSERT INTO questions (subject, difficulty, question_text, options, correct_answer, question_elo, expected_time_seconds)
-VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, q.Subject, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswer, q.QuestionElo, q.ExpectedTimeSeconds).Scan(&id)
+		err := c.Pool.QueryRow(ctx, `INSERT INTO questions (subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, q.Subject, q.Type, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswers, q.QuestionElo, q.ExpectedTimeSeconds).Scan(&id)
 		return id, err
 	}
-	ct, err := c.Pool.Exec(ctx, `UPDATE questions SET subject=$1,difficulty=$2,question_text=$3,options=$4,correct_answer=$5,question_elo=$6,expected_time_seconds=$7,updated_at=NOW() WHERE id=$8`,
-		q.Subject, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswer, q.QuestionElo, q.ExpectedTimeSeconds, q.ID)
+	ct, err := c.Pool.Exec(ctx, `UPDATE questions SET subject=$1,type=$2,difficulty=$3,question_text=$4,options=$5,correct_answers=$6,question_elo=$7,expected_time_seconds=$8,updated_at=NOW() WHERE id=$9`,
+		q.Subject, q.Type, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswers, q.QuestionElo, q.ExpectedTimeSeconds, q.ID)
 	if err != nil {
 		return 0, err
 	}
@@ -268,7 +285,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, q.Subject, q.Difficulty, q.Question
 }
 
 func (c *Client) ListQuestions(ctx context.Context, limit int) ([]models.Question, error) {
-	rows, err := c.Pool.Query(ctx, `SELECT id, subject, difficulty, question_text, options, correct_answer, question_elo, expected_time_seconds FROM questions ORDER BY id DESC LIMIT $1`, limit)
+	rows, err := c.Pool.Query(ctx, `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds FROM questions ORDER BY id DESC LIMIT $1`, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +293,7 @@ func (c *Client) ListQuestions(ctx context.Context, limit int) ([]models.Questio
 	questions := []models.Question{}
 	for rows.Next() {
 		var q models.Question
-		if err := rows.Scan(&q.ID, &q.Subject, &q.Difficulty, &q.QuestionText, &q.Options, &q.CorrectAnswer, &q.QuestionElo, &q.ExpectedTimeSeconds); err != nil {
+		if err := rows.Scan(&q.ID, &q.Subject, &q.Type, &q.Difficulty, &q.QuestionText, &q.Options, &q.CorrectAnswers, &q.QuestionElo, &q.ExpectedTimeSeconds); err != nil {
 			return nil, err
 		}
 		questions = append(questions, q)
@@ -305,6 +322,49 @@ func (c *Client) ListSubjects(ctx context.Context) ([]string, error) {
 	for rows.Next() {
 		var s string
 		if err := rows.Scan(&s); err != nil {
+			return nil, err
+		}
+		subjects = append(subjects, s)
+	}
+	return subjects, rows.Err()
+}
+
+type GlobalStats struct {
+	TotalQuestions int     `json:"total_questions"`
+	TotalUsers     int     `json:"total_users"`
+	TotalSubjects  int     `json:"total_subjects"`
+	SuccessRate    float64 `json:"success_rate"`
+}
+
+func (c *Client) GetGlobalStats(ctx context.Context) (GlobalStats, error) {
+	const q = `
+SELECT
+    (SELECT COUNT(*) FROM questions) as total_questions,
+    (SELECT COUNT(*) FROM users) as total_users,
+    (SELECT COUNT(DISTINCT subject) FROM questions) as total_subjects,
+    COALESCE((SELECT AVG(accuracy_percentage) FROM users WHERE total_questions_solved > 0), 0) as success_rate
+`
+	var stats GlobalStats
+	err := c.Pool.QueryRow(ctx, q).Scan(&stats.TotalQuestions, &stats.TotalUsers, &stats.TotalSubjects, &stats.SuccessRate)
+	return stats, err
+}
+
+type SubjectWithCount struct {
+	Subject       string `json:"subject"`
+	QuestionCount int    `json:"question_count"`
+}
+
+func (c *Client) ListSubjectsWithCounts(ctx context.Context) ([]SubjectWithCount, error) {
+	const q = `SELECT subject, COUNT(*) as question_count FROM questions GROUP BY subject ORDER BY subject`
+	rows, err := c.Pool.Query(ctx, q)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var subjects []SubjectWithCount
+	for rows.Next() {
+		var s SubjectWithCount
+		if err := rows.Scan(&s.Subject, &s.QuestionCount); err != nil {
 			return nil, err
 		}
 		subjects = append(subjects, s)

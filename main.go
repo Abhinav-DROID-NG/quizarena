@@ -41,6 +41,7 @@ func main() {
 	userHandler := handlers.NewUserHandler(db)
 	adminHandler := handlers.NewAdminHandler(db)
 	healthHandler := handlers.NewHealthHandler(db)
+	statsHandler := handlers.NewStatsHandler(db)
 
 	r := gin.New()
 	r.Use(gin.Recovery())
@@ -58,6 +59,8 @@ func main() {
 	})
 	r.Static("/frontend", "./frontend")
 	r.GET("/health", healthHandler.Health)
+	r.GET("/stats", statsHandler.Global)
+	r.GET("/subjects-detailed", statsHandler.Subjects)
 
 	auth := r.Group("/auth")
 	{
