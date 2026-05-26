@@ -9,6 +9,7 @@ import (
 )
 
 const UserIDKey = "userID"
+const UserClaimsKey = "userClaims"
 
 type tokenParser interface {
 	ParseToken(raw string) (int64, map[string]any, error)
@@ -22,12 +23,13 @@ func JWTAuth(tokenManager tokenParser) gin.HandlerFunc {
 			return
 		}
 		token := strings.TrimPrefix(auth, "Bearer ")
-		userID, _, err := tokenManager.ParseToken(token)
+		userID, claims, err := tokenManager.ParseToken(token)
 		if err != nil {
 			utils.RespondError(c, http.StatusUnauthorized, "UNAUTHORIZED", "invalid token")
 			return
 		}
 		c.Set(UserIDKey, userID)
+		c.Set(UserClaimsKey, claims)
 		c.Next()
 	}
 }

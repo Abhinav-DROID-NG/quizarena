@@ -1,13 +1,17 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/Abhinav-DROID-NG/quizarena/database"
 	"github.com/Abhinav-DROID-NG/quizarena/utils"
 	"github.com/gin-gonic/gin"
 )
+
+const leaderboardQueryTimeout = 2 * time.Second
 
 type LeaderboardHandler struct {
 	DB *database.Client
@@ -26,13 +30,22 @@ func (h *LeaderboardHandler) BySubject(c *gin.Context) {
 }
 
 func (h *LeaderboardHandler) respond(c *gin.Context, subject string) {
+	if err := utils.ValidateSubject(subject); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid subject")
+		return
+	}
 	limit := 100
 	if l := c.Query("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
-			limit = parsed
+		parsed, err := strconv.Atoi(l)
+		if err != nil || parsed <= 0 || parsed > 500 {
+			utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid leaderboard limit")
+			return
 		}
+		limit = parsed
 	}
-	leaders, err := h.DB.ListLeaderboard(c.Request.Context(), subject, limit)
+	queryCtx, cancel := context.WithTimeout(c.Request.Context(), leaderboardQueryTimeout)
+	defer cancel()
+	leaders, err := h.DB.ListLeaderboard(queryCtx, subject, limit)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to load leaderboard")
 		return
@@ -51,7 +64,9 @@ func (h *LeaderboardHandler) UserRank(c *gin.Context) {
 		utils.RespondError(c, http.StatusNotFound, "NOT_FOUND", "user not found")
 		return
 	}
-	leaders, err := h.DB.ListLeaderboard(c.Request.Context(), "", 10000)
+	queryCtx, cancel := context.WithTimeout(c.Request.Context(), leaderboardQueryTimeout)
+	defer cancel()
+	leaders, err := h.DB.ListLeaderboard(queryCtx, "", 10000)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to load leaderboard")
 		return

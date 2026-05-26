@@ -3,8 +3,10 @@ package database
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/Abhinav-DROID-NG/quizarena/models"
+	"github.com/Abhinav-DROID-NG/quizarena/utils"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -13,10 +15,15 @@ type Client struct {
 	Pool *pgxpool.Pool
 }
 
+var ErrConnectionExhausted = errors.New("database connection pool exhausted")
+
 func New(ctx context.Context, databaseURL string, maxConns int32) (*Client, error) {
 	cfg, err := pgxpool.ParseConfig(databaseURL)
 	if err != nil {
 		return nil, err
+	}
+	if maxConns < utils.MinDBMaxConns || maxConns > utils.MaxDBMaxConns {
+		return nil, fmt.Errorf("invalid max connections: %d", maxConns)
 	}
 	cfg.MaxConns = maxConns
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
@@ -28,6 +35,24 @@ func New(ctx context.Context, databaseURL string, maxConns int32) (*Client, erro
 
 func (c *Client) Ping(ctx context.Context) error { return c.Pool.Ping(ctx) }
 func (c *Client) Close()                         { c.Pool.Close() }
+
+func (c *Client) IsConnectionExhausted() bool {
+	if c == nil || c.Pool == nil {
+		return false
+	}
+	stats := c.Pool.Stat()
+	return stats.MaxConns() > 0 && stats.AcquiredConns() >= stats.MaxConns() && stats.IdleConns() == 0
+}
+
+func (c *Client) annotatePoolError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if c.IsConnectionExhausted() {
+		return fmt.Errorf("%w: %v", ErrConnectionExhausted, err)
+	}
+	return err
+}
 
 func (c *Client) UpsertOAuthUser(ctx context.Context, sub, email, name, picture string) (models.User, error) {
 	const q = `
@@ -47,7 +72,7 @@ accuracy_percentage, average_response_time, total_questions_solved, strongest_su
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
 	)
 	if err != nil {
-		return u, err
+		return u, c.annotatePoolError(err)
 	}
 	if gSub != nil {
 		u.GoogleSub = *gSub
@@ -71,7 +96,7 @@ accuracy_percentage, average_response_time, total_questions_solved, strongest_su
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
 	)
 	if err != nil {
-		return u, err
+		return u, c.annotatePoolError(err)
 	}
 	if gSub != nil {
 		u.GoogleSub = *gSub
@@ -93,7 +118,7 @@ FROM users WHERE email = $1`
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject, &pwHash,
 	)
 	if err != nil {
-		return u, "", err
+		return u, "", c.annotatePoolError(err)
 	}
 	if gSub != nil {
 		u.GoogleSub = *gSub
@@ -119,7 +144,7 @@ FROM users WHERE id = $1`
 		&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject,
 	)
 	if err != nil {
-		return u, err
+		return u, c.annotatePoolError(err)
 	}
 	if gSub != nil {
 		u.GoogleSub = *gSub
@@ -133,13 +158,13 @@ FROM users WHERE id = $1`
 func (c *Client) CreateSession(ctx context.Context, userID int64, subject string) (int64, error) {
 	var sessionID int64
 	err := c.Pool.QueryRow(ctx, `INSERT INTO quiz_sessions (user_id, subject, status) VALUES ($1, $2, 'active') RETURNING id`, userID, subject).Scan(&sessionID)
-	return sessionID, err
+	return sessionID, c.annotatePoolError(err)
 }
 
 func (c *Client) GetSession(ctx context.Context, sessionID, userID int64) (models.QuizSession, error) {
 	var s models.QuizSession
 	err := c.Pool.QueryRow(ctx, `SELECT id, user_id, subject, status FROM quiz_sessions WHERE id = $1 AND user_id = $2`, sessionID, userID).Scan(&s.ID, &s.UserID, &s.Subject, &s.Status)
-	return s, err
+	return s, c.annotatePoolError(err)
 }
 
 func (c *Client) GetQuestionByID(ctx context.Context, questionID int64) (models.Question, error) {
@@ -147,7 +172,7 @@ func (c *Client) GetQuestionByID(ctx context.Context, questionID int64) (models.
 	err := c.Pool.QueryRow(ctx, `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds FROM questions WHERE id = $1`, questionID).Scan(
 		&q.ID, &q.Subject, &q.Type, &q.Difficulty, &q.QuestionText, &q.Options, &q.CorrectAnswers, &q.QuestionElo, &q.ExpectedTimeSeconds,
 	)
-	return q, err
+	return q, c.annotatePoolError(err)
 }
 
 func (c *Client) GetAdaptiveQuestion(ctx context.Context, subject string, targetElo int) (models.Question, error) {
@@ -160,7 +185,7 @@ LIMIT 1`
 	err := c.Pool.QueryRow(ctx, q, subject, targetElo).Scan(
 		&question.ID, &question.Subject, &question.Type, &question.Difficulty, &question.QuestionText, &question.Options, &question.CorrectAnswers, &question.QuestionElo, &question.ExpectedTimeSeconds,
 	)
-	return question, err
+	return question, c.annotatePoolError(err)
 }
 
 func (c *Client) SaveAnswerAndUpdateStats(ctx context.Context, sessionID, questionID, userID int64, selectedAnswers, correctAnswers []string, timeTaken, timeScore, performance float64, eloChange, newElo int) error {
@@ -184,11 +209,11 @@ func (c *Client) SaveAnswerAndUpdateStats(ctx context.Context, sessionID, questi
 
 	tx, err := c.Pool.BeginTx(ctx, pgx.TxOptions{})
 	if err != nil {
-		return err
+		return c.annotatePoolError(err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	_, err = tx.Exec(ctx, `INSERT INTO quiz_answers
+	insertCT, err := tx.Exec(ctx, `INSERT INTO quiz_answers
 (session_id, question_id, user_id, selected_answers, correct, time_taken_seconds, time_score, performance_score, elo_change)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 		sessionID, questionID, userID, selectedAnswers, correct, timeTaken, timeScore, performance, eloChange,
@@ -196,8 +221,11 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 	if err != nil {
 		return err
 	}
+	if insertCT.RowsAffected() != 1 {
+		return errors.New("failed to persist answer")
+	}
 
-	_, err = tx.Exec(ctx, `UPDATE users
+	updateCT, err := tx.Exec(ctx, `UPDATE users
 SET current_elo = $1,
 peak_elo = GREATEST(peak_elo, $1),
 total_questions_solved = total_questions_solved + 1,
@@ -210,7 +238,9 @@ WHERE id = $4`, newElo, correct, timeTaken, userID)
 	if err != nil {
 		return err
 	}
-
+	if updateCT.RowsAffected() != 1 {
+		return errors.New("failed to update user stats")
+	}
 	if err = tx.Commit(ctx); err != nil {
 		return err
 	}
@@ -237,7 +267,7 @@ ORDER BY u.current_elo DESC LIMIT $2`
 		rows, err = c.Pool.Query(ctx, q, limit)
 	}
 	if err != nil {
-		return nil, err
+		return nil, c.annotatePoolError(err)
 	}
 	defer rows.Close()
 
@@ -268,15 +298,21 @@ ORDER BY u.current_elo DESC LIMIT $2`
 
 func (c *Client) UpsertQuestion(ctx context.Context, q models.Question) (int64, error) {
 	if q.ID == 0 {
+		if err := utils.ValidateQuestionInput(q); err != nil {
+			return 0, err
+		}
 		var id int64
 		err := c.Pool.QueryRow(ctx, `INSERT INTO questions (subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds)
 VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, q.Subject, q.Type, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswers, q.QuestionElo, q.ExpectedTimeSeconds).Scan(&id)
-		return id, err
+		return id, c.annotatePoolError(err)
+	}
+	if err := utils.ValidateQuestionInput(q); err != nil {
+		return 0, err
 	}
 	ct, err := c.Pool.Exec(ctx, `UPDATE questions SET subject=$1,type=$2,difficulty=$3,question_text=$4,options=$5,correct_answers=$6,question_elo=$7,expected_time_seconds=$8,updated_at=NOW() WHERE id=$9`,
 		q.Subject, q.Type, q.Difficulty, q.QuestionText, q.Options, q.CorrectAnswers, q.QuestionElo, q.ExpectedTimeSeconds, q.ID)
 	if err != nil {
-		return 0, err
+		return 0, c.annotatePoolError(err)
 	}
 	if ct.RowsAffected() == 0 {
 		return 0, errors.New("question not found")
@@ -287,7 +323,7 @@ VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`, q.Subject, q.Type, q.Difficulty,
 func (c *Client) ListQuestions(ctx context.Context, limit int) ([]models.Question, error) {
 	rows, err := c.Pool.Query(ctx, `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds FROM questions ORDER BY id DESC LIMIT $1`, limit)
 	if err != nil {
-		return nil, err
+		return nil, c.annotatePoolError(err)
 	}
 	defer rows.Close()
 	questions := []models.Question{}
@@ -304,7 +340,7 @@ func (c *Client) ListQuestions(ctx context.Context, limit int) ([]models.Questio
 func (c *Client) DeleteQuestion(ctx context.Context, id int64) error {
 	ct, err := c.Pool.Exec(ctx, `DELETE FROM questions WHERE id=$1`, id)
 	if err != nil {
-		return err
+		return c.annotatePoolError(err)
 	}
 	if ct.RowsAffected() == 0 {
 		return errors.New("question not found")
@@ -315,7 +351,7 @@ func (c *Client) DeleteQuestion(ctx context.Context, id int64) error {
 func (c *Client) ListSubjects(ctx context.Context) ([]string, error) {
 	rows, err := c.Pool.Query(ctx, `SELECT DISTINCT subject FROM questions ORDER BY subject`)
 	if err != nil {
-		return nil, err
+		return nil, c.annotatePoolError(err)
 	}
 	defer rows.Close()
 	var subjects []string
@@ -346,7 +382,7 @@ SELECT
 `
 	var stats GlobalStats
 	err := c.Pool.QueryRow(ctx, q).Scan(&stats.TotalQuestions, &stats.TotalUsers, &stats.TotalSubjects, &stats.SuccessRate)
-	return stats, err
+	return stats, c.annotatePoolError(err)
 }
 
 type SubjectWithCount struct {
@@ -358,7 +394,7 @@ func (c *Client) ListSubjectsWithCounts(ctx context.Context) ([]SubjectWithCount
 	const q = `SELECT subject, COUNT(*) as question_count FROM questions GROUP BY subject ORDER BY subject`
 	rows, err := c.Pool.Query(ctx, q)
 	if err != nil {
-		return nil, err
+		return nil, c.annotatePoolError(err)
 	}
 	defer rows.Close()
 	var subjects []SubjectWithCount

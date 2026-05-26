@@ -58,6 +58,10 @@ func (h *QuizHandler) Start(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid payload")
 		return
 	}
+	if err := utils.ValidateSubject(req.Subject); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid subject")
+		return
+	}
 	sid, err := h.DB.CreateSession(c.Request.Context(), uid, req.Subject)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to start session")
@@ -77,6 +81,10 @@ func (h *QuizHandler) NextQuestion(c *gin.Context) {
 		return
 	}
 	subject := c.Query("subject")
+	if err := utils.ValidateSubject(subject); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid subject")
+		return
+	}
 	target := h.Elo.NextTargetElo(user.CurrentElo)
 	question, err := h.DB.GetAdaptiveQuestion(c.Request.Context(), subject, target)
 	if err != nil {
@@ -96,6 +104,18 @@ func (h *QuizHandler) SubmitAnswer(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid payload")
 		return
 	}
+	if err := utils.ValidateSelectedAnswers(req.Selected); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid selected answers")
+		return
+	}
+	if err := utils.ValidateTimeTaken(req.TimeTakenSec); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid time taken")
+		return
+	}
+	if req.SkipsInRow < 0 || req.WrongInRow < 0 {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid streak counters")
+		return
+	}
 	_, err := h.DB.GetSession(c.Request.Context(), req.SessionID, uid)
 	if err != nil {
 		utils.RespondError(c, http.StatusNotFound, "NOT_FOUND", "session not found")
@@ -109,6 +129,18 @@ func (h *QuizHandler) SubmitAnswer(c *gin.Context) {
 	user, err := h.DB.GetUserByID(c.Request.Context(), uid)
 	if err != nil {
 		utils.RespondError(c, http.StatusNotFound, "NOT_FOUND", "user not found")
+		return
+	}
+	if err := utils.ValidateElo(user.CurrentElo); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid user elo")
+		return
+	}
+	if err := utils.ValidateElo(question.QuestionElo); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid question elo")
+		return
+	}
+	if err := utils.ValidateExpectedTime(question.ExpectedTimeSeconds); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid expected question time")
 		return
 	}
 
@@ -132,7 +164,8 @@ func (h *QuizHandler) SubmitAnswer(c *gin.Context) {
 	performance := h.Elo.PerformanceScore(timeScore, correct)
 	_, eloChange := h.Elo.CalculateNewElo(user.CurrentElo, question.QuestionElo, question.Difficulty, performance)
 	eloChange = h.Elo.ApplyAntiGuessingPenalty(eloChange, correct, req.TimeTakenSec, question.ExpectedTimeSeconds, req.SkipsInRow)
-	newElo := user.CurrentElo + eloChange
+	newElo := utils.ClampElo(user.CurrentElo + eloChange)
+	eloChange = newElo - user.CurrentElo
 	nextTarget := h.Elo.NextTargetElo(newElo)
 	nextDiff := h.Elo.NextQuestionDifficulty(newElo, nextTarget)
 	confidence := h.Elo.ConfidenceScore(correct, timeScore, req.WrongInRow, req.SkipsInRow)

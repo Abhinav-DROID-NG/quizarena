@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestCORSOrigins(t *testing.T) {
@@ -53,5 +54,33 @@ func TestLoadReadsDotEnv(t *testing.T) {
 	loadDotEnv(dotEnvPath)
 	if got := os.Getenv(key); got != "test-client-id" {
 		t.Fatalf("expected env from .env, got %q", got)
+	}
+}
+
+func TestSplitCSV(t *testing.T) {
+	values := splitCSV("admin@example.com, ops@example.com, ,")
+	if len(values) != 2 || values[0] != "admin@example.com" || values[1] != "ops@example.com" {
+		t.Fatalf("unexpected csv split: %#v", values)
+	}
+}
+
+func TestValidateConfig(t *testing.T) {
+	cfg := Config{
+		Port:               "8080",
+		FrontendOrigin:     "http://localhost:5500",
+		JWTSecret:          "super-secret",
+		JWTExpiration:      24 * time.Hour,
+		GoogleClientID:     "client-id",
+		AdminEmails:        []string{"admin@example.com"},
+		DatabaseURL:        "db-url",
+		DBMaxConns:         30,
+		ShutdownTimeoutSec: 10,
+	}
+	warnings, err := Validate(cfg)
+	if err != nil {
+		t.Fatalf("expected valid config, got error: %v", err)
+	}
+	if len(warnings) != 0 {
+		t.Fatalf("expected no warnings, got %#v", warnings)
 	}
 }

@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -22,13 +24,28 @@ import (
 
 func main() {
 	cfg := config.Load()
-	logger, _ := zap.NewProduction()
-	defer logger.Sync()
+	logger, err := zap.NewProduction()
+	if err != nil {
+		log.Printf("failed to initialize production logger: %v", err)
+		logger = zap.NewNop()
+	}
+	defer func() { _ = logger.Sync() }()
+	if warnings, cfgErr := config.Validate(cfg); cfgErr != nil {
+		logger.Fatal("invalid configuration", zap.Error(cfgErr))
+	} else {
+		for _, warning := range warnings {
+			logger.Warn("configuration warning", zap.String("warning", warning))
+		}
+	}
 
-	ctx := context.Background()
-	db, err := database.New(ctx, cfg.DatabaseURL, cfg.DBMaxConns)
+	startupCtx, cancelStartup := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancelStartup()
+	db, err := database.New(startupCtx, cfg.DatabaseURL, cfg.DBMaxConns)
 	if err != nil {
 		logger.Fatal("failed to init db", zap.Error(err))
+	}
+	if err := db.Ping(startupCtx); err != nil {
+		logger.Fatal("database ping failed", zap.Error(err))
 	}
 	defer db.Close()
 
@@ -39,7 +56,7 @@ func main() {
 	quizHandler := handlers.NewQuizHandler(db, eloEngine)
 	leaderboardHandler := handlers.NewLeaderboardHandler(db)
 	userHandler := handlers.NewUserHandler(db)
-	adminHandler := handlers.NewAdminHandler(db)
+	adminHandler := handlers.NewAdminHandler(db, cfg.AdminEmails)
 	healthHandler := handlers.NewHealthHandler(db)
 	statsHandler := handlers.NewStatsHandler(db)
 
@@ -47,17 +64,35 @@ func main() {
 	r.Use(gin.Recovery())
 	r.Use(middleware.RequestLogger(logger))
 	r.Use(middleware.RateLimitMiddleware(rate.Limit(10), 10))
-	r.Use(middleware.CORS(config.CORSOrigins(cfg.FrontendOrigin)))
+	r.Use(middleware.CORSWithLogger(config.CORSOrigins(cfg.FrontendOrigin), logger))
+
+	frontendDir := filepath.Clean("./frontend")
+	frontendHTML := filepath.Clean("./frontend/quizarena.html")
+	frontendReady := true
+	if dirInfo, statErr := os.Stat(frontendDir); statErr != nil || !dirInfo.IsDir() {
+		frontendReady = false
+		logger.Error("frontend directory unavailable", zap.String("path", frontendDir), zap.Error(statErr))
+	}
+	if fileInfo, statErr := os.Stat(frontendHTML); statErr != nil || fileInfo.IsDir() {
+		frontendReady = false
+		logger.Error("frontend html unavailable", zap.String("path", frontendHTML), zap.Error(statErr))
+	}
 
 	r.GET("/", func(c *gin.Context) {
-		c.File("frontend/quizarena.html")
+		if !frontendReady {
+			utils.RespondError(c, http.StatusServiceUnavailable, "FRONTEND_UNAVAILABLE", "frontend not available")
+			return
+		}
+		c.File(frontendHTML)
 	})
 	r.GET("/app-config", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{
 			"google_client_id": cfg.GoogleClientID,
 		})
 	})
-	r.Static("/frontend", "./frontend")
+	if frontendReady {
+		r.Static("/frontend", frontendDir)
+	}
 	r.GET("/health", healthHandler.Health)
 	r.GET("/stats", statsHandler.Global)
 	r.GET("/subjects-detailed", statsHandler.Subjects)
@@ -108,7 +143,7 @@ func main() {
 	go func() {
 		logger.Info("starting server", zap.String("port", cfg.Port))
 		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Fatal("server failed", zap.Error(err))
+			logger.Error("server failed", zap.Error(err))
 		}
 	}()
 
