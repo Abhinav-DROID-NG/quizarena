@@ -16,6 +16,7 @@ type Config struct {
 	JWTSecret          string
 	JWTExpiration      time.Duration
 	GoogleClientID     string
+	AdminEmails        []string
 	DatabaseURL        string
 	DBMaxConns         int32
 	ShutdownTimeoutSec int
@@ -29,6 +30,7 @@ func Load() Config {
 		JWTSecret:          getEnv("JWT_SECRET", "change-me-in-production"),
 		JWTExpiration:      time.Duration(getEnvAsInt("JWT_EXP_HOURS", 24)) * time.Hour,
 		GoogleClientID:     getEnv("GOOGLE_CLIENT_ID", ""),
+		AdminEmails:        splitCSV(getEnv("ADMIN_EMAILS", "")),
 		DatabaseURL:        getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/quizarena?sslmode=disable"),
 		DBMaxConns:         getEnvAsInt32("DB_MAX_CONNS", 30),
 		ShutdownTimeoutSec: getEnvAsInt("SHUTDOWN_TIMEOUT_SEC", 10),
@@ -109,4 +111,19 @@ func getEnvAsInt32(name string, defaultVal int32) int32 {
 		return defaultVal
 	}
 	return int32(value64)
+}
+
+func splitCSV(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	out := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }

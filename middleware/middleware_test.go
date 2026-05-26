@@ -8,6 +8,7 @@ import (
 
 	"github.com/Abhinav-DROID-NG/quizarena/utils"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
 
@@ -20,10 +21,16 @@ func TestJWTAuthValidAndInvalidToken(t *testing.T) {
 	}
 
 	r := gin.New()
-	r.GET("/secure", JWTAuth(tm), func(c *gin.Context) { c.Status(http.StatusOK) })
+	r.GET("/secure", JWTAuth(tm), func(c *gin.Context) {
+		if _, ok := c.Get(UserClaimsKey); !ok {
+			c.Status(http.StatusUnauthorized)
+			return
+		}
+		c.Status(http.StatusOK)
+	})
 
 	badReq := httptest.NewRequest(http.MethodGet, "/secure", nil)
-	badReq.Header.Set("Authorization", "Bearer invalid")
+	badReq.Header.Set("Authorization", "invalid")
 	badResp := httptest.NewRecorder()
 	r.ServeHTTP(badResp, badReq)
 	if badResp.Code != http.StatusUnauthorized {
@@ -87,5 +94,34 @@ func TestCORSMiddleware(t *testing.T) {
 	r.ServeHTTP(optResp, optReq)
 	if optResp.Code != http.StatusNoContent {
 		t.Fatalf("expected 204 for preflight got %d", optResp.Code)
+	}
+}
+
+func TestRequestLoggerNilLogger(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(RequestLogger(nil))
+	r.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	resp := httptest.NewRecorder()
+	r.ServeHTTP(resp, req)
+	if resp.Code != http.StatusOK {
+		t.Fatalf("expected 200 got %d", resp.Code)
+	}
+}
+
+func TestCORSWithLoggerRejectsUnknownOrigin(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(CORSWithLogger([]string{"https://frontend.example.com"}, zap.NewNop()))
+	r.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://evil.example.com")
+	resp := httptest.NewRecorder()
+	r.ServeHTTP(resp, req)
+	if got := resp.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected empty allow-origin for unknown origin, got %q", got)
 	}
 }

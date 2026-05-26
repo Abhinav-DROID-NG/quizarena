@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/Abhinav-DROID-NG/quizarena/database"
 	"github.com/Abhinav-DROID-NG/quizarena/middleware"
@@ -11,6 +12,8 @@ import (
 	"github.com/gin-gonic/gin"
 	"google.golang.org/api/idtoken"
 )
+
+const googleVerifyTimeout = 3 * time.Second
 
 type GoogleVerifier interface {
 	Verify(ctx context.Context, token string, audience string) (*idtoken.Payload, error)
@@ -59,6 +62,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "INVALID_INPUT", err.Error())
 		return
 	}
+	if err := utils.ValidateEmail(req.Email); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "INVALID_INPUT", "invalid email")
+		return
+	}
+	if err := utils.ValidateName(req.Name); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "INVALID_INPUT", "invalid name")
+		return
+	}
 
 	hash, err := utils.HashPassword(req.Password)
 	if err != nil {
@@ -89,6 +100,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		utils.RespondError(c, http.StatusBadRequest, "INVALID_INPUT", err.Error())
+		return
+	}
+	if err := utils.ValidateEmail(req.Email); err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "INVALID_INPUT", "invalid email")
 		return
 	}
 
@@ -123,7 +138,9 @@ func (h *AuthHandler) GoogleAuth(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "id_token is required")
 		return
 	}
-	payload, err := h.Verifier.Verify(c.Request.Context(), req.IDToken, h.GoogleClientID)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), googleVerifyTimeout)
+	defer cancel()
+	payload, err := h.Verifier.Verify(ctx, req.IDToken, h.GoogleClientID)
 	if err != nil {
 		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google token")
 		return
@@ -132,6 +149,21 @@ func (h *AuthHandler) GoogleAuth(c *gin.Context) {
 	name, _ := payload.Claims["name"].(string)
 	picture, _ := payload.Claims["picture"].(string)
 	sub := payload.Subject
+	if strings.TrimSpace(sub) == "" {
+		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google subject")
+		return
+	}
+	if err := utils.ValidateEmail(email); err != nil {
+		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google email")
+		return
+	}
+	if strings.TrimSpace(name) == "" {
+		name = "QuizArena User"
+	}
+	if err := utils.ValidateName(name); err != nil {
+		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google profile")
+		return
+	}
 
 	user, err := h.DB.UpsertOAuthUser(c.Request.Context(), sub, email, name, picture)
 	if err != nil {
