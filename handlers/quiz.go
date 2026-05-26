@@ -200,12 +200,15 @@ func (h *QuizHandler) SessionHistory(c *gin.Context) {
 		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid session id")
 		return
 	}
-	session, err := h.DB.GetSession(c.Request.Context(), sid, uid)
+	sessionHistory, answers, err := h.DB.GetSessionHistory(c.Request.Context(), sid, uid)
 	if err != nil {
 		utils.RespondError(c, http.StatusNotFound, "NOT_FOUND", "session not found")
 		return
 	}
-	c.JSON(http.StatusOK, session)
+	c.JSON(http.StatusOK, models.SessionHistoryResponse{
+		Session: sessionHistory,
+		Answers: answers,
+	})
 }
 
 func (h *QuizHandler) ListSubjects(c *gin.Context) {

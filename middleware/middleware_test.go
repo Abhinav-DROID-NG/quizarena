@@ -125,3 +125,44 @@ func TestCORSWithLoggerRejectsUnknownOrigin(t *testing.T) {
 		t.Fatalf("expected empty allow-origin for unknown origin, got %q", got)
 	}
 }
+
+func TestCORSMiddlewareWithNoAllowedOrigins(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.Use(CORSWithLogger(nil, zap.NewNop()))
+	r.GET("/", func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.Header.Set("Origin", "https://frontend.example.com")
+	resp := httptest.NewRecorder()
+	r.ServeHTTP(resp, req)
+	if got := resp.Header().Get("Access-Control-Allow-Origin"); got != "" {
+		t.Fatalf("expected no allow-origin when origins are not configured, got %q", got)
+	}
+}
+
+func TestAuthRateLimitMiddleware(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	mu.Lock()
+	limiters = map[string]*ipLimiter{}
+	mu.Unlock()
+
+	r := gin.New()
+	r.POST("/auth/login", AuthRateLimitMiddleware(rate.Limit(1), 1), func(c *gin.Context) { c.Status(http.StatusOK) })
+
+	req1 := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	req1.RemoteAddr = "1.2.3.4:1234"
+	resp1 := httptest.NewRecorder()
+	r.ServeHTTP(resp1, req1)
+	if resp1.Code != http.StatusOK {
+		t.Fatalf("first request should pass, got %d", resp1.Code)
+	}
+
+	req2 := httptest.NewRequest(http.MethodPost, "/auth/login", nil)
+	req2.RemoteAddr = "1.2.3.4:1234"
+	resp2 := httptest.NewRecorder()
+	r.ServeHTTP(resp2, req2)
+	if resp2.Code != http.StatusTooManyRequests {
+		t.Fatalf("second immediate request should be rate limited, got %d", resp2.Code)
+	}
+}

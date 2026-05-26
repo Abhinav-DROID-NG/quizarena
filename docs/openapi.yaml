@@ -1,58 +1,157 @@
 openapi: 3.0.3
 info:
   title: QuizArena API
-  version: 1.0.0
+  version: 1.1.0
 servers:
   - url: http://localhost:8080
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code: { type: string }
+            message: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer, format: int64 }
+        email: { type: string }
+        name: { type: string }
+        current_elo: { type: integer }
+    LeaderboardPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        next_cursor:
+          type: string
 paths:
   /health:
     get:
       summary: Health check
-  /auth/google:
+      responses:
+        '200': { description: OK }
+  /auth/register:
     post:
-      summary: Google OAuth callback
-  /auth/logout:
+      summary: Register with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email: { type: string }
+                password: { type: string }
+                name: { type: string }
+      responses:
+        '201': { description: Registered }
+        '400': { description: Invalid input, content: { application/json: { schema: { $ref: '#/components/schemas/Error' }}}}
+  /auth/login:
     post:
-      summary: Logout and invalidate token
-  /auth/me:
-    get:
-      summary: Current user profile
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string }
+                password: { type: string }
+      responses:
+        '200': { description: Authenticated }
+        '401': { description: Invalid credentials }
   /quiz/start:
     post:
       summary: Start quiz session
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Session created }
   /quiz/next-question:
     get:
       summary: Get adaptive question
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: subject
+          schema: { type: string }
+      responses:
+        '200': { description: Question }
   /quiz/submit-answer:
     post:
       summary: Submit answer and update Elo
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Answer outcome }
   /quiz/session/{id}:
     get:
-      summary: Session history
+      summary: Session with full answer history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: Session history }
   /leaderboard:
     get:
-      summary: Global leaderboard
+      summary: Global leaderboard page
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+        - in: query
+          name: cursor
+          schema: { type: string, example: "1400:102" }
+      responses:
+        '200':
+          description: Leaderboard page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardPage'
   /leaderboard/subject/{subject}:
     get:
-      summary: Subject leaderboard
+      summary: Subject leaderboard page
+      parameters:
+        - in: path
+          name: subject
+          required: true
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+        - in: query
+          name: cursor
+          schema: { type: string }
+      responses:
+        '200':
+          description: Leaderboard page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardPage'
   /leaderboard/user/{id}:
     get:
-      summary: User rank and stats
-  /user/profile:
-    get:
-      summary: User profile
-    put:
-      summary: Update user profile
-  /user/dashboard:
-    get:
-      summary: Dashboard metrics
-  /admin/questions:
-    post:
-      summary: Add question
-    get:
-      summary: List questions
-  /admin/questions/{id}:
-    put:
-      summary: Edit question
-    delete:
-      summary: Delete question
+      summary: User rank using DB-level row_number
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        '200': { description: User rank + user object }

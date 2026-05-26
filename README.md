@@ -1,40 +1,43 @@
 # QuizArena Backend
 
-Production-oriented Go backend for adaptive quiz gameplay with Google OAuth2, JWT auth, and PostgreSQL.
+Adaptive quiz backend with Elo-based progression, JWT/Google auth, PostgreSQL persistence, leaderboard APIs, and admin question management.
 
-## Features
-- Google OAuth2 login endpoint + JWT issuance
-- JWT middleware for protected endpoints
-- Rate limiting (10 req/s per IP)
-- CORS configuration for frontend origins
-- Elo engine with:
-  - Expected probability `1 / (1 + 10^((question_elo - user_elo)/400))`
-  - Performance score (80% time + 20% correctness)
-  - Difficulty K-factors (easy=16, medium=24, hard=32)
-  - Anti-guessing penalties and confidence score
-- PostgreSQL schema and indexes
-- Health check endpoint (`GET /health`)
-- Graceful shutdown
-
-## Run locally
-1. Start dependencies:
+## Quick start
+1. Start PostgreSQL:
    ```bash
    docker compose up -d
    ```
-2. Set env vars (optional overrides):
-   - `GOOGLE_CLIENT_ID`
-   - `JWT_SECRET`
-   - `DATABASE_URL`
-   - `FRONTEND_ORIGIN`
-3. Run server:
+2. Configure environment:
+   - `GOOGLE_CLIENT_ID` (**required**)
+   - `JWT_SECRET` (set a strong secret)
+   - `DATABASE_URL` (default points to local postgres)
+   - `FRONTEND_ORIGIN` (comma-separated allowed origins; empty = no cross-origin access)
+   - `DB_MAX_CONNS` (default `30`)
+3. Run the service:
    ```bash
    go run ./...
    ```
 
-## Test
+## Build and test
 ```bash
 go test ./...
+go build ./...
 ```
 
-## API docs
-OpenAPI spec: `docs/openapi.yaml`
+## Database
+- SQL schema and indexes live in `database/migrations/`.
+- Use the provided Makefile target:
+  ```bash
+  make migrate
+  ```
+
+## Security notes
+- Passwords use `bcrypt` (`utils/password.go`), and verification uses `bcrypt.CompareHashAndPassword` (timing-safe comparison).
+- CORS is deny-by-default unless `FRONTEND_ORIGIN` is explicitly configured.
+- Extra rate limiting is applied to `/auth/login` and `/auth/register`.
+
+## Documentation
+- API guide: `docs/API.md`
+- OpenAPI spec: `docs/openapi.yaml`
+- Deployment guide: `docs/DEPLOYMENT.md`
+- Elo model details: `docs/ELO.md`

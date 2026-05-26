@@ -45,8 +45,8 @@ func Validate(cfg Config) ([]string, error) {
 	}
 
 	origins := CORSOrigins(cfg.FrontendOrigin)
-	if len(origins) == 1 && origins[0] == "*" {
-		warnings = append(warnings, "FRONTEND_ORIGIN resolved to wildcard")
+	if len(origins) == 0 {
+		warnings = append(warnings, "FRONTEND_ORIGIN is empty; browser clients from other origins will be rejected")
 	}
 	if len(cfg.AdminEmails) == 0 {
 		warnings = append(warnings, "ADMIN_EMAILS is empty; admin routes will return forbidden")

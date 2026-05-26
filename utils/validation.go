@@ -28,6 +28,7 @@ const (
 	MaxEmailLength        = 320
 	MaxSubjectLength      = 100
 	MaxQuestionTextLength = 5000
+	MaxOptionLength       = 512
 	MinQuestionOptions    = 2
 	MaxQuestionOptions    = 10
 )
@@ -131,7 +132,14 @@ func ValidateQuestionInput(q models.Question) error {
 	if ValidateDifficulty(q.Difficulty) != nil {
 		return ErrInvalidQuestion
 	}
-	if text := strings.TrimSpace(q.QuestionText); text == "" || len(text) > MaxQuestionTextLength {
+	if q.Type != "MCQ" && q.Type != "MSQ" {
+		return ErrInvalidQuestion
+	}
+	text := strings.TrimSpace(q.QuestionText)
+	if text == "" || len(text) > MaxQuestionTextLength {
+		return ErrInvalidQuestion
+	}
+	if hasControlChars(text) {
 		return ErrInvalidQuestion
 	}
 	if len(q.Options) < MinQuestionOptions || len(q.Options) > MaxQuestionOptions {
@@ -140,7 +148,10 @@ func ValidateQuestionInput(q models.Question) error {
 	options := make(map[string]struct{}, len(q.Options))
 	for _, option := range q.Options {
 		trimmed := strings.TrimSpace(option)
-		if trimmed == "" {
+		if trimmed == "" || len(trimmed) > MaxOptionLength || hasControlChars(trimmed) {
+			return ErrInvalidQuestion
+		}
+		if _, exists := options[trimmed]; exists {
 			return ErrInvalidQuestion
 		}
 		options[trimmed] = struct{}{}
@@ -148,10 +159,19 @@ func ValidateQuestionInput(q models.Question) error {
 	if len(q.CorrectAnswers) == 0 {
 		return ErrInvalidQuestion
 	}
+	correctAnswers := make(map[string]struct{}, len(q.CorrectAnswers))
 	for _, ans := range q.CorrectAnswers {
-		if _, ok := options[strings.TrimSpace(ans)]; !ok {
+		trimmed := strings.TrimSpace(ans)
+		if _, ok := options[trimmed]; !ok {
 			return ErrInvalidQuestion
 		}
+		if _, exists := correctAnswers[trimmed]; exists {
+			return ErrInvalidQuestion
+		}
+		correctAnswers[trimmed] = struct{}{}
+	}
+	if q.Type == "MCQ" && len(correctAnswers) != 1 {
+		return ErrInvalidQuestion
 	}
 	if ValidateElo(q.QuestionElo) != nil {
 		return ErrInvalidQuestion
@@ -166,10 +186,25 @@ func ValidateSelectedAnswers(selected []string) error {
 	if len(selected) == 0 {
 		return ErrInvalidAnswerSet
 	}
+	seen := make(map[string]struct{}, len(selected))
 	for _, answer := range selected {
-		if strings.TrimSpace(answer) == "" {
+		trimmed := strings.TrimSpace(answer)
+		if trimmed == "" || hasControlChars(trimmed) {
 			return ErrInvalidAnswerSet
 		}
+		if _, exists := seen[trimmed]; exists {
+			return ErrInvalidAnswerSet
+		}
+		seen[trimmed] = struct{}{}
 	}
 	return nil
+}
+
+func hasControlChars(input string) bool {
+	for _, r := range input {
+		if r < 32 && r != '\n' && r != '\r' && r != '\t' {
+			return true
+		}
+	}
+	return false
 }

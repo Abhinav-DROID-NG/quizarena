@@ -23,6 +23,9 @@ import (
 )
 
 func main() {
+	// Runtime configuration is loaded from environment variables (and optional .env):
+	// PORT, FRONTEND_ORIGIN, JWT_SECRET, JWT_EXP_HOURS, GOOGLE_CLIENT_ID,
+	// ADMIN_EMAILS, DATABASE_URL, DB_MAX_CONNS, SHUTDOWN_TIMEOUT_SEC.
 	cfg := config.Load()
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -99,8 +102,8 @@ func main() {
 
 	auth := r.Group("/auth")
 	{
-		auth.POST("/register", authHandler.Register)
-		auth.POST("/login", authHandler.Login)
+		auth.POST("/register", middleware.AuthRateLimitMiddleware(rate.Limit(1), 5), authHandler.Register)
+		auth.POST("/login", middleware.AuthRateLimitMiddleware(rate.Limit(1), 5), authHandler.Login)
 		auth.POST("/google", authHandler.GoogleAuth)
 		auth.POST("/logout", authHandler.Logout)
 		auth.GET("/me", middleware.JWTAuth(tokenManager), authHandler.Me)
