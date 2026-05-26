@@ -1841,14 +1841,14 @@ function renderQuizQuestion() {
       if (APP.state.answered) return;
       if (question.type === 'MSQ') {
         button.classList.toggle('selected');
-        if (quiz.selectedKeys.includes(key)) {
-          quiz.selectedKeys = quiz.selectedKeys.filter(k => k !== key);
+        if (quiz.selectedKeys.includes(option)) {
+          quiz.selectedKeys = quiz.selectedKeys.filter(k => k !== option);
         } else {
-          quiz.selectedKeys.push(key);
+          quiz.selectedKeys.push(option);
         }
         qs('#quiz-confirm-btn').style.display = quiz.selectedKeys.length > 0 ? 'inline-flex' : 'none';
       } else {
-        quiz.selectedKeys = [key];
+        quiz.selectedKeys = [option];
         submitQuizAnswer().catch((error) => showToast(error.message));
       }
     });
@@ -1937,12 +1937,12 @@ async function submitQuizAnswer(timedOut = false) {
   const confirmBtn = qs('#quiz-confirm-btn');
   if (confirmBtn) confirmBtn.style.display = 'none';
 
-  qsa('#quiz-options .quiz-option').forEach((opt) => {
-    const key = qs('.option-key', opt).textContent;
-    if (correctKeys.includes(key)) {
+  qsa('#quiz-options .quiz-option').forEach((opt, index) => {
+    const optionString = quiz.currentQuestion.options[index];
+    if (correctKeys.includes(optionString)) {
       opt.classList.add('correct');
       opt.classList.remove('selected');
-    } else if (selected.includes(key)) {
+    } else if (selected.includes(optionString)) {
       opt.classList.add('wrong');
     }
     opt.disabled = true;
