@@ -21,10 +21,21 @@ var (
 )
 
 func RateLimitMiddleware(rps rate.Limit, burst int) gin.HandlerFunc {
+	return rateLimitMiddleware(rps, burst, func(c *gin.Context) string {
+		return "global:" + c.ClientIP()
+	})
+}
+
+func AuthRateLimitMiddleware(rps rate.Limit, burst int) gin.HandlerFunc {
+	return rateLimitMiddleware(rps, burst, func(c *gin.Context) string {
+		return "auth:" + c.FullPath() + ":" + c.ClientIP()
+	})
+}
+
+func rateLimitMiddleware(rps rate.Limit, burst int, keyFunc func(*gin.Context) string) gin.HandlerFunc {
 	go cleanupLimiters()
 	return func(c *gin.Context) {
-		ip := c.ClientIP()
-		limiter := getLimiter(ip, rps, burst)
+		limiter := getLimiter(keyFunc(c), rps, burst)
 		if !limiter.Allow() {
 			utils.RespondError(c, http.StatusTooManyRequests, "RATE_LIMITED", "too many requests")
 			return
@@ -33,13 +44,13 @@ func RateLimitMiddleware(rps rate.Limit, burst int) gin.HandlerFunc {
 	}
 }
 
-func getLimiter(ip string, rps rate.Limit, burst int) *rate.Limiter {
+func getLimiter(key string, rps rate.Limit, burst int) *rate.Limiter {
 	mu.Lock()
 	defer mu.Unlock()
-	entry, exists := limiters[ip]
+	entry, exists := limiters[key]
 	if !exists {
 		entry = &ipLimiter{limiter: rate.NewLimiter(rps, burst), lastSeen: time.Now()}
-		limiters[ip] = entry
+		limiters[key] = entry
 		return entry.limiter
 	}
 	entry.lastSeen = time.Now()

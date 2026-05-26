@@ -14,8 +14,8 @@ func TestCORSOrigins(t *testing.T) {
 	}
 
 	fallback := CORSOrigins(" , ")
-	if len(fallback) != 1 || fallback[0] != "*" {
-		t.Fatalf("expected wildcard fallback got %#v", fallback)
+	if len(fallback) != 0 {
+		t.Fatalf("expected empty fallback got %#v", fallback)
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/Abhinav-DROID-NG/quizarena/models"
 	"github.com/Abhinav-DROID-NG/quizarena/utils"
@@ -26,6 +27,15 @@ func New(ctx context.Context, databaseURL string, maxConns int32) (*Client, erro
 		return nil, fmt.Errorf("invalid max connections: %d", maxConns)
 	}
 	cfg.MaxConns = maxConns
+	cfg.MinConns = maxConns / 4
+	if cfg.MinConns < 4 {
+		cfg.MinConns = 4
+	}
+	if cfg.MinConns > cfg.MaxConns {
+		cfg.MinConns = cfg.MaxConns
+	}
+	cfg.MaxConnIdleTime = 5 * time.Minute
+	cfg.HealthCheckPeriod = 1 * time.Minute
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -176,9 +186,28 @@ func (c *Client) GetQuestionByID(ctx context.Context, questionID int64) (models.
 }
 
 func (c *Client) GetAdaptiveQuestion(ctx context.Context, subject string, targetElo int) (models.Question, error) {
-	const q = `SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds
-FROM questions
-WHERE ($1 = '' OR subject = $1)
+	const q = `
+WITH lower_band AS (
+	SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds
+	FROM questions
+	WHERE ($1 = '' OR subject = $1) AND question_elo <= $2
+	ORDER BY question_elo DESC, id DESC
+	LIMIT 25
+),
+upper_band AS (
+	SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds
+	FROM questions
+	WHERE ($1 = '' OR subject = $1) AND question_elo >= $2
+	ORDER BY question_elo ASC, id ASC
+	LIMIT 25
+),
+candidates AS (
+	SELECT * FROM lower_band
+	UNION ALL
+	SELECT * FROM upper_band
+)
+SELECT id, subject, type, difficulty, question_text, options, correct_answers, question_elo, expected_time_seconds
+FROM candidates
 ORDER BY ABS(question_elo - $2), random()
 LIMIT 1`
 	var question models.Question
@@ -248,36 +277,50 @@ WHERE id = $4`, newElo, correct, timeTaken, userID)
 }
 
 func (c *Client) ListLeaderboard(ctx context.Context, subject string, limit int) ([]models.User, error) {
+	users, _, _, _, err := c.ListLeaderboardPage(ctx, subject, limit, 0, 0)
+	return users, err
+}
+
+func (c *Client) ListLeaderboardPage(ctx context.Context, subject string, limit int, cursorElo int, cursorUserID int64) ([]models.User, int, int64, bool, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	fetchLimit := limit + 1
 	q := `SELECT id, google_sub, email, name, picture, current_elo, peak_elo, accuracy_percentage, average_response_time,
-total_questions_solved, strongest_subject, weakest_subject FROM users ORDER BY current_elo DESC LIMIT $1`
+total_questions_solved, strongest_subject, weakest_subject
+FROM users
+WHERE ($2 = 0 AND $3 = 0) OR (current_elo < $2 OR (current_elo = $2 AND id < $3))
+ORDER BY current_elo DESC, id DESC
+LIMIT $1`
+	var rows pgx.Rows
+	var err error
 	if subject != "" {
 		q = `SELECT u.id, u.google_sub, u.email, u.name, u.picture, u.current_elo, u.peak_elo, u.accuracy_percentage, u.average_response_time,
 u.total_questions_solved, u.strongest_subject, u.weakest_subject
 FROM users u
-JOIN quiz_sessions s ON s.user_id = u.id AND s.subject = $1
-GROUP BY u.id
-ORDER BY u.current_elo DESC LIMIT $2`
-	}
-
-	var rows pgx.Rows
-	var err error
-	if subject != "" {
-		rows, err = c.Pool.Query(ctx, q, subject, limit)
+WHERE EXISTS (
+	SELECT 1 FROM quiz_sessions s
+	WHERE s.user_id = u.id AND s.subject = $2
+)
+AND (($3 = 0 AND $4 = 0) OR (u.current_elo < $3 OR (u.current_elo = $3 AND u.id < $4)))
+ORDER BY u.current_elo DESC, u.id DESC
+LIMIT $1`
+		rows, err = c.Pool.Query(ctx, q, fetchLimit, subject, cursorElo, cursorUserID)
 	} else {
-		rows, err = c.Pool.Query(ctx, q, limit)
+		rows, err = c.Pool.Query(ctx, q, fetchLimit, cursorElo, cursorUserID)
 	}
 	if err != nil {
-		return nil, c.annotatePoolError(err)
+		return nil, 0, 0, false, c.annotatePoolError(err)
 	}
 	defer rows.Close()
 
-	users := make([]models.User, 0, limit)
+	users := make([]models.User, 0, fetchLimit)
 	for rows.Next() {
 		var u models.User
 		var gSub, pic *string
 		if err := rows.Scan(&u.ID, &gSub, &u.Email, &u.Name, &pic, &u.CurrentElo, &u.PeakElo,
 			&u.AccuracyPercentage, &u.AverageResponseTime, &u.TotalQuestions, &u.StrongestSubject, &u.WeakestSubject); err != nil {
-			return nil, err
+			return nil, 0, 0, false, err
 		}
 		if gSub != nil {
 			u.GoogleSub = *gSub
@@ -288,12 +331,84 @@ ORDER BY u.current_elo DESC LIMIT $2`
 		users = append(users, u)
 	}
 	if rows.Err() != nil {
-		return nil, rows.Err()
+		return nil, 0, 0, false, rows.Err()
 	}
 	if len(users) == 0 {
-		return []models.User{}, nil
+		return []models.User{}, 0, 0, false, nil
 	}
-	return users, nil
+	hasMore := len(users) > limit
+	if hasMore {
+		users = users[:limit]
+	}
+	nextCursorElo := 0
+	var nextCursorUserID int64
+	if hasMore {
+		last := users[len(users)-1]
+		nextCursorElo = last.CurrentElo
+		nextCursorUserID = last.ID
+	}
+	return users, nextCursorElo, nextCursorUserID, hasMore, nil
+}
+
+func (c *Client) GetUserRank(ctx context.Context, userID int64) (int, error) {
+	const q = `
+SELECT ranked.rank
+FROM (
+	SELECT id, ROW_NUMBER() OVER (ORDER BY current_elo DESC, id DESC) AS rank
+	FROM users
+) AS ranked
+WHERE ranked.id = $1`
+	var rank int
+	err := c.Pool.QueryRow(ctx, q, userID).Scan(&rank)
+	if err != nil {
+		return 0, c.annotatePoolError(err)
+	}
+	return rank, nil
+}
+
+func (c *Client) GetSessionHistory(ctx context.Context, sessionID, userID int64) (models.QuizSession, []models.SessionAnswerHistory, error) {
+	session, err := c.GetSession(ctx, sessionID, userID)
+	if err != nil {
+		return models.QuizSession{}, nil, err
+	}
+
+	const q = `SELECT a.id, a.question_id, q.question_text, q.options, a.selected_answers, q.correct_answers,
+	a.correct, a.time_taken_seconds, a.time_score, a.performance_score, a.elo_change, a.created_at
+FROM quiz_answers a
+JOIN questions q ON q.id = a.question_id
+WHERE a.session_id = $1 AND a.user_id = $2
+ORDER BY a.created_at ASC, a.id ASC`
+	rows, err := c.Pool.Query(ctx, q, sessionID, userID)
+	if err != nil {
+		return models.QuizSession{}, nil, c.annotatePoolError(err)
+	}
+	defer rows.Close()
+
+	history := make([]models.SessionAnswerHistory, 0)
+	for rows.Next() {
+		var answer models.SessionAnswerHistory
+		if err := rows.Scan(
+			&answer.AnswerID,
+			&answer.QuestionID,
+			&answer.QuestionText,
+			&answer.Options,
+			&answer.SelectedAnswers,
+			&answer.CorrectAnswers,
+			&answer.Correct,
+			&answer.TimeTakenSeconds,
+			&answer.TimeScore,
+			&answer.PerformanceScore,
+			&answer.EloChange,
+			&answer.AnsweredAt,
+		); err != nil {
+			return models.QuizSession{}, nil, c.annotatePoolError(err)
+		}
+		history = append(history, answer)
+	}
+	if err := rows.Err(); err != nil {
+		return models.QuizSession{}, nil, c.annotatePoolError(err)
+	}
+	return session, history, nil
 }
 
 func (c *Client) UpsertQuestion(ctx context.Context, q models.Question) (int64, error) {

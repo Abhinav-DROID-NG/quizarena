@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Abhinav-DROID-NG/quizarena/database"
@@ -43,14 +44,23 @@ func (h *LeaderboardHandler) respond(c *gin.Context, subject string) {
 		}
 		limit = parsed
 	}
+	cursorElo, cursorUserID, err := parseLeaderboardCursor(c.Query("cursor"))
+	if err != nil {
+		utils.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "invalid leaderboard cursor")
+		return
+	}
 	queryCtx, cancel := context.WithTimeout(c.Request.Context(), leaderboardQueryTimeout)
 	defer cancel()
-	leaders, err := h.DB.ListLeaderboard(queryCtx, subject, limit)
+	leaders, nextCursorElo, nextCursorUserID, hasMore, err := h.DB.ListLeaderboardPage(queryCtx, subject, limit, cursorElo, cursorUserID)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to load leaderboard")
 		return
 	}
-	c.JSON(http.StatusOK, leaders)
+	resp := gin.H{"items": leaders}
+	if hasMore {
+		resp["next_cursor"] = buildLeaderboardCursor(nextCursorElo, nextCursorUserID)
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func (h *LeaderboardHandler) UserRank(c *gin.Context) {
@@ -66,17 +76,33 @@ func (h *LeaderboardHandler) UserRank(c *gin.Context) {
 	}
 	queryCtx, cancel := context.WithTimeout(c.Request.Context(), leaderboardQueryTimeout)
 	defer cancel()
-	leaders, err := h.DB.ListLeaderboard(queryCtx, "", 10000)
+	rank, err := h.DB.GetUserRank(queryCtx, uid)
 	if err != nil {
 		utils.RespondError(c, http.StatusInternalServerError, "DB_ERROR", "failed to load leaderboard")
 		return
 	}
-	rank := 0
-	for i, leader := range leaders {
-		if leader.ID == uid {
-			rank = i + 1
-			break
-		}
-	}
 	c.JSON(http.StatusOK, gin.H{"rank": rank, "user": user})
+}
+
+func parseLeaderboardCursor(raw string) (int, int64, error) {
+	if strings.TrimSpace(raw) == "" {
+		return 0, 0, nil
+	}
+	parts := strings.Split(raw, ":")
+	if len(parts) != 2 {
+		return 0, 0, strconv.ErrSyntax
+	}
+	elo, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, 0, err
+	}
+	uid, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil {
+		return 0, 0, err
+	}
+	return elo, uid, nil
+}
+
+func buildLeaderboardCursor(elo int, userID int64) string {
+	return strconv.Itoa(elo) + ":" + strconv.FormatInt(userID, 10)
 }

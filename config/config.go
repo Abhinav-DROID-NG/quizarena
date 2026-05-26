@@ -73,9 +73,6 @@ func CORSOrigins(origin string) []string {
 			out = append(out, trimmed)
 		}
 	}
-	if len(out) == 0 {
-		return []string{"*"}
-	}
 	return out
 }
 
