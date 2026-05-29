@@ -70,7 +70,7 @@ func main() {
 	r.Use(middleware.CORSWithLogger(config.CORSOrigins(cfg.FrontendOrigin), logger))
 
 	frontendDir := filepath.Clean("./frontend")
-	frontendHTML := filepath.Clean("./frontend/quizarena-production.html")
+	frontendHTML := filepath.Clean("./frontend/quizarena.html")
 	frontendReady := true
 	if dirInfo, statErr := os.Stat(frontendDir); statErr != nil || !dirInfo.IsDir() {
 		frontendReady = false

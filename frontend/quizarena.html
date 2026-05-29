@@ -411,19 +411,19 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
       </div>
       <div class="hero-stats">
         <div>
-          <div class="hero-stat-n">3,524</div>
+          <div class="hero-stat-n">...</div>
           <div class="hero-stat-l">Questions</div>
         </div>
         <div>
-          <div class="hero-stat-n">1</div>
+          <div class="hero-stat-n">...</div>
           <div class="hero-stat-l">Core Topic</div>
         </div>
         <div>
-          <div class="hero-stat-n">18,500</div>
+          <div class="hero-stat-n">...</div>
           <div class="hero-stat-l">Active Users</div>
         </div>
         <div>
-          <div class="hero-stat-n">92%</div>
+          <div class="hero-stat-n">...%</div>
           <div class="hero-stat-l">Success Rate</div>
         </div>
       </div>
@@ -475,7 +475,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
       <div class="section-label">Coverage</div>
       <h2 class="section-title">Aptitude <em>Subjects</em></h2>
       <div class="subjects-scroll">
-        <div class="subj-chip" onclick="goto('home')">Aptitude <span class="subj-chip-count">3,524q</span></div>
+        <!-- Dynamically populated -->
       </div>
     </div>
   </section>
@@ -494,11 +494,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
         <div class="lb-row lb-header">
           <span>#</span><span>Player</span><span>ELO</span><span>Accuracy</span>
         </div>
-        <div class="lb-row"><span class="lb-rank r1">01</span><span class="lb-name">Arjun Mehta</span><span class="lb-elo">2184</span><span class="lb-acc">94%</span></div>
-        <div class="lb-row"><span class="lb-rank r2">02</span><span class="lb-name">Priya Sharma</span><span class="lb-elo">2071</span><span class="lb-acc">91%</span></div>
-        <div class="lb-row"><span class="lb-rank r3">03</span><span class="lb-name">Rohan Das</span><span class="lb-elo">1988</span><span class="lb-acc">89%</span></div>
-        <div class="lb-row"><span class="lb-rank">04</span><span class="lb-name">Kavya Nair</span><span class="lb-elo">1944</span><span class="lb-acc">87%</span></div>
-        <div class="lb-row"><span class="lb-rank">05</span><span class="lb-name">Siddharth K.</span><span class="lb-elo">1902</span><span class="lb-acc">86%</span></div>
+        <!-- Dynamically populated -->
       </div>
     </div>
   </section>
@@ -846,42 +842,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
               <th>Action</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Which normal form removes transitive dependency?</td>
-              <td><span class="tag">DBMS</span></td>
-              <td><span class="tag green">Easy</span></td>
-              <td style="font-family:var(--mono);color:var(--text3)">2,841</td>
-              <td><button class="del-btn">Delete</button></td>
-            </tr>
-            <tr>
-              <td>What is the time complexity of Dijkstra's using min-heap?</td>
-              <td><span class="tag">Algorithms</span></td>
-              <td><span class="tag">Medium</span></td>
-              <td style="font-family:var(--mono);color:var(--text3)">1,920</td>
-              <td><button class="del-btn">Delete</button></td>
-            </tr>
-            <tr>
-              <td>Which scheduling is optimal for minimizing average waiting time?</td>
-              <td><span class="tag blue">OS</span></td>
-              <td><span class="tag green">Easy</span></td>
-              <td style="font-family:var(--mono);color:var(--text3)">3,104</td>
-              <td><button class="del-btn">Delete</button></td>
-            </tr>
-            <tr>
-              <td>What language is accepted by a pushdown automaton?</td>
-              <td><span class="tag">TOC</span></td>
-              <td><span class="tag red">Hard</span></td>
-              <td style="font-family:var(--mono);color:var(--text3)">984</td>
-              <td><button class="del-btn">Delete</button></td>
-            </tr>
-            <tr>
-              <td>In TCP, what does the SYN flag indicate?</td>
-              <td><span class="tag blue">CN</span></td>
-              <td><span class="tag green">Easy</span></td>
-              <td style="font-family:var(--mono);color:var(--text3)">2,277</td>
-              <td><button class="del-btn">Delete</button></td>
-            </tr>
+          <tbody id="admin-questions-list">
+            <!-- Dynamically populated -->
           </tbody>
         </table>
       </div>
@@ -898,7 +860,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
     <div class="subjects-header">
       <div class="section-label" style="text-align:center">Practice Arena</div>
       <h1 class="section-title" style="text-align:center">Choose your <em>subject</em></h1>
-      <p class="section-sub" style="margin:0 auto;text-align:center">Over 3,500 high-quality questions focused on Aptitude. Each quiz adapts to your current ELO rating.</p>
+      <p class="section-sub" style="margin:0 auto;text-align:center">High-quality questions across various technical domains. Each quiz adapts to your current ELO rating.</p>
     </div>
 
     <div class="subjects-grid" id="subjects-grid">
@@ -920,36 +882,12 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
     <div class="lb-page-header">
       <div class="section-label" style="text-align:center">Global Rankings</div>
       <h1 class="section-title" style="text-align:center">The <em>Arena</em> Leaderboard</h1>
-      <p class="section-sub" style="text-align:center;margin:0 auto">ELO-based ranking across 18,542 active GATE aspirants</p>
+      <p class="section-sub" style="text-align:center;margin:0 auto">ELO-based ranking across all active aspirants</p>
     </div>
 
     <!-- Top 3 Podium -->
-    <div class="top3-podium">
-      <div class="podium-card second">
-        <div class="podium-rank-badge r2">2</div>
-        <div class="podium-name">Priya Sharma</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px">IIT Bombay</div>
-        <div class="podium-elo">2071</div>
-        <div class="podium-elo-label">ELO</div>
-        <div class="podium-acc">91% acc · 1,240q</div>
-      </div>
-      <div class="podium-card first">
-        <div class="podium-crown">👑</div>
-        <div class="podium-rank-badge r1">1</div>
-        <div class="podium-name">Arjun Mehta</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px">NIT Trichy</div>
-        <div class="podium-elo">2184</div>
-        <div class="podium-elo-label">ELO</div>
-        <div class="podium-acc">94% acc · 1,480q</div>
-      </div>
-      <div class="podium-card third">
-        <div class="podium-rank-badge r3">3</div>
-        <div class="podium-name">Rohan Das</div>
-        <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-bottom:8px">BITS Pilani</div>
-        <div class="podium-elo">1988</div>
-        <div class="podium-elo-label">ELO</div>
-        <div class="podium-acc">89% acc · 1,100q</div>
-      </div>
+    <div class="top3-podium" id="leaderboard-podium">
+      <!-- Dynamically populated -->
     </div>
 
     <!-- Full Table -->
@@ -957,55 +895,8 @@ nav{position:fixed;top:0;left:0;right:0;z-index:200;height:58px;display:flex;ali
       <div class="lb-full-header">
         <span>Rank</span><span>Player</span><span>ELO</span><span>Solved</span><span>Accuracy</span>
       </div>
-      <div class="lb-full-row">
-        <span class="rank-num top">01</span>
-        <div class="user-info"><div class="user-avatar" style="background:rgba(255,215,0,0.1);color:#FFD700;border-color:rgba(255,215,0,0.2)">AM</div><div><div class="user-name-lb">Arjun Mehta</div><div class="user-tag-lb">NIT Trichy</div></div></div>
-        <span class="elo-val">2184</span><span class="solved-val">1,480</span><span class="acc-val">94%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num top">02</span>
-        <div class="user-info"><div class="user-avatar">PS</div><div><div class="user-name-lb">Priya Sharma</div><div class="user-tag-lb">IIT Bombay</div></div></div>
-        <span class="elo-val">2071</span><span class="solved-val">1,240</span><span class="acc-val">91%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num top">03</span>
-        <div class="user-info"><div class="user-avatar">RD</div><div><div class="user-name-lb">Rohan Das</div><div class="user-tag-lb">BITS Pilani</div></div></div>
-        <span class="elo-val">1988</span><span class="solved-val">1,100</span><span class="acc-val">89%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">04</span>
-        <div class="user-info"><div class="user-avatar">KN</div><div><div class="user-name-lb">Kavya Nair</div><div class="user-tag-lb">VIT Vellore</div></div></div>
-        <span class="elo-val">1944</span><span class="solved-val">980</span><span class="acc-val">87%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">05</span>
-        <div class="user-info"><div class="user-avatar">SK</div><div><div class="user-name-lb">Siddharth K.</div><div class="user-tag-lb">IIT Kharagpur</div></div></div>
-        <span class="elo-val">1902</span><span class="solved-val">860</span><span class="acc-val">86%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">06</span>
-        <div class="user-info"><div class="user-avatar">MR</div><div><div class="user-name-lb">Meena Reddy</div><div class="user-tag-lb">IIIT Hyderabad</div></div></div>
-        <span class="elo-val">1878</span><span class="solved-val">820</span><span class="acc-val">85%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">07</span>
-        <div class="user-info"><div class="user-avatar">AT</div><div><div class="user-name-lb">Ankit Tiwari</div><div class="user-tag-lb">Delhi College Eng.</div></div></div>
-        <span class="elo-val">1841</span><span class="solved-val">790</span><span class="acc-val">84%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">08</span>
-        <div class="user-info"><div class="user-avatar">SB</div><div><div class="user-name-lb">Shruti Bose</div><div class="user-tag-lb">NIT Warangal</div></div></div>
-        <span class="elo-val">1812</span><span class="solved-val">750</span><span class="acc-val">83%</span>
-      </div>
-      <div class="lb-full-row">
-        <span class="rank-num">09</span>
-        <div class="user-info"><div class="user-avatar">VP</div><div><div class="user-name-lb">Vikram Pillai</div><div class="user-tag-lb">IIT Madras</div></div></div>
-        <span class="elo-val">1789</span><span class="solved-val">720</span><span class="acc-val">82%</span>
-      </div>
-      <div class="lb-full-row you">
-        <span class="rank-num top">42</span>
-        <div class="user-info"><div class="user-avatar" style="background:var(--gold3);color:var(--gold);border-color:rgba(201,168,76,0.3)">AM</div><div><div class="user-name-lb">Arjun Mehta <span class="tag" style="font-size:9px;padding:2px 7px">You</span></div><div class="user-tag-lb">NIT Trichy</div></div></div>
-        <span class="elo-val">1450</span><span class="solved-val">320</span><span class="acc-val">78%</span>
+      <div id="leaderboard-full-list">
+        <!-- Dynamically populated -->
       </div>
     </div>
   </div>
@@ -1172,7 +1063,8 @@ async function api(path, options = {}) {
     if (response.status === 401) {
       clearSession();
     }
-    throw new Error(data?.message || data?.error || `Request failed with ${response.status}`);
+    const errMsg = data?.error?.message || data?.message || data?.error || `Request failed with ${response.status}`;
+    throw new Error(errMsg);
   }
   return data;
 }
@@ -1593,8 +1485,6 @@ function renderLeaderboardPreview() {
   const preview = qs('.lb-preview-table');
   if (!preview) return;
   let leaders = APP.state.leaderboard || [];
-  const baron = { name: "Baron Arthur Grey", current_elo: 3200, accuracy_percentage: 100, total_questions_solved: 580, average_response_time: 0.1, strongest_subject: "All Subjects" };
-  leaders = [baron, ...leaders.filter(l => l.name !== baron.name)];
   const rows = leaders.slice(0, 5).map((user, index) => {
     const rank = index + 1;
     const rankClass = rank <= 3 ? `r${rank}` : '';
@@ -1614,18 +1504,6 @@ function renderLeaderboard() {
   const page = qs('#page-leaderboard .container.page-body');
   if (!page) return;
   let leaders = APP.state.leaderboard || [];
-  
-  // Inject Baron Arthur Grey at the top
-  const baron = {
-    name: "Baron Arthur Grey",
-    current_elo: 3200,
-    accuracy_percentage: 100,
-    total_questions_solved: 580,
-    average_response_time: 0.1,
-    strongest_subject: "All Subjects",
-    id: -1
-  };
-  leaders = [baron, ...leaders.filter(l => l.name !== baron.name)];
 
   const podium = leaders.slice(0, 3);
   const podiumOrder = [1, 0, 2];
@@ -1683,20 +1561,20 @@ function renderLeaderboard() {
 
 function getSubjectMeta(subject) {
   const meta = {
-    'Engineering Mathematics': { icon: '∑', full: 'Engineering Mathematics', questions: 16, diff: 'Hard' },
-    'Digital Logic': { icon: '01', full: 'Digital Logic', questions: 31, diff: 'Medium' },
-    'Computer Organization and Architecture': { icon: '⚙️', full: 'COA', questions: 77, diff: 'Hard' },
-    'Programming and Data Structures': { icon: '💻', full: 'DS & Programming', questions: 24, diff: 'Medium' },
-    'Algorithms': { icon: '⚧', full: 'Algorithms', questions: 27, diff: 'Hard' },
-    'Theory of Computation': { icon: '♾', full: 'Theory of Computation', questions: 8, diff: 'Hard' },
-    'Compiler Design': { icon: '🏗', full: 'Compiler Design', questions: 4, diff: 'Medium' },
-    'Operating System': { icon: '🖥', full: 'Operating System', questions: 8, diff: 'Medium' },
-    'Databases': { icon: '🗄', full: 'Databases (SQL)', questions: 14, diff: 'Medium' },
-    'Computer Networks': { icon: '🌐', full: 'Computer Networks', questions: 28, diff: 'Medium' },
-    'Aptitude': { icon: '🔢', full: 'Aptitude', questions: 4563, diff: 'Medium' },
-    'General Aptitude': { icon: '🧠', full: 'General Aptitude', questions: 104, diff: 'Easy' }
+    'Engineering Mathematics': { icon: '∑', full: 'Engineering Mathematics' },
+    'Digital Logic': { icon: '01', full: 'Digital Logic' },
+    'Computer Organization and Architecture': { icon: '⚙️', full: 'COA' },
+    'Programming and Data Structures': { icon: '💻', full: 'DS & Programming' },
+    'Algorithms': { icon: '⚧', full: 'Algorithms' },
+    'Theory of Computation': { icon: '♾', full: 'Theory of Computation' },
+    'Compiler Design': { icon: '🏗', full: 'Compiler Design' },
+    'Operating System': { icon: '🖥', full: 'Operating System' },
+    'Databases': { icon: '🗄', full: 'Databases (SQL)' },
+    'Computer Networks': { icon: '🌐', full: 'Computer Networks' },
+    'Aptitude': { icon: '🔢', full: 'Aptitude' },
+    'General Aptitude': { icon: '🧠', full: 'General Aptitude' }
   };
-  return meta[subject] || { icon: '📚', full: subject, questions: '...', diff: 'Adaptive' };
+  return meta[subject] || { icon: '📚', full: subject };
 }
 
 async function loadLandingStats() {
@@ -1725,11 +1603,7 @@ async function renderSubjects() {
     console.error('Failed to load subjects:', error);
   }
 
-  const defaultSubjects = [
-    { subject: 'Aptitude', question_count: 0 }
-  ];
-
-  const displaySubjects = subjects.length > 0 ? subjects : defaultSubjects;
+  const displaySubjects = subjects;
 
   // Update Landing page chips
   const scroll = qs('.subjects-scroll');

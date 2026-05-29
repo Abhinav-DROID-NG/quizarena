@@ -13,7 +13,7 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
-const googleVerifyTimeout = 3 * time.Second
+const googleVerifyTimeout = 10 * time.Second
 
 type GoogleVerifier interface {
 	Verify(ctx context.Context, token string, audience string) (*idtoken.Payload, error)
@@ -142,7 +142,7 @@ func (h *AuthHandler) GoogleAuth(c *gin.Context) {
 	defer cancel()
 	payload, err := h.Verifier.Verify(ctx, req.IDToken, h.GoogleClientID)
 	if err != nil {
-		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google token")
+		utils.RespondError(c, http.StatusUnauthorized, "INVALID_GOOGLE_TOKEN", "invalid google token: "+err.Error())
 		return
 	}
 	email, _ := payload.Claims["email"].(string)

@@ -24,7 +24,7 @@ func Validate(cfg Config) ([]string, error) {
 		return nil, fmt.Errorf("%w: DATABASE_URL is required", ErrInvalidConfig)
 	}
 	if strings.TrimSpace(cfg.GoogleClientID) == "" {
-		return nil, fmt.Errorf("%w: GOOGLE_CLIENT_ID is required", ErrInvalidConfig)
+		warnings = append(warnings, "GOOGLE_CLIENT_ID is empty; Google OAuth will not work")
 	}
 
 	port, err := strconv.Atoi(cfg.Port)
